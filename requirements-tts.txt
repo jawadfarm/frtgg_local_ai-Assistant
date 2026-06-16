@@ -1,0 +1,34 @@
+# ============================================================
+#  TTS server dependencies  (apis/tts-copilt.py)
+#  REQUIRES Python 3.10 ONLY — Coqui TTS does not run on other versions.
+#
+#  Versions are PINNED to a mutually-compatible set for Coqui TTS 0.22.0
+#  (XTTS v2). Two independent constraints:
+#    * transformers: XTTS streaming imports BeamSearchScorer, removed in
+#      transformers 4.41+/5.x  ->  pin to 4.40.2.
+#    * torch: tts-copilt.py calls torch.serialization.add_safe_globals(...),
+#      which only exists in torch >= 2.6 (the new weights_only=True default).
+#      So torch must NOT be downgraded below 2.6.
+#
+#  Install into the bundled Python (from the project root):
+#     core\python\python.exe -m pip install -r requirements-tts.txt
+#  …or into a separate venv:
+#     py -3.10 -m venv tts-venv
+#     tts-venv\Scripts\activate
+#     pip install -r requirements-tts.txt
+#
+#  NOTE: PyTorch (torch/torchvision/torchaudio) is handled AUTOMATICALLY
+#  by installer.py. It detects your GPU (NVIDIA/AMD/Intel) and picks the
+#  right build. Do NOT add torch lines here — the installer overrides them.
+# ============================================================
+
+TTS==0.22.0               # Coqui XTTS v2  (from TTS.api import TTS)
+transformers==4.40.2      # XTTS streaming needs <=4.40.x (BeamSearchScorer); 4.41+ / 5.x break it
+tokenizers==0.19.1        # matches transformers 4.40.2
+
+numpy==1.22.0             # required by TTS 0.22.0 on Python 3.10
+sounddevice>=0.4.6        # audio playback
+soundfile>=0.12.1         # audio file I/O
+
+# Optional: GPU acceleration for AMD / Intel cards on Windows
+# torch-directml           # imported only if available (import torch_directml)

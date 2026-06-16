@@ -1,0 +1,22 @@
+# ============================================================
+#  Core project dependencies  (folders: core + apis)
+#  Cross-platform — works on Python 3.8+
+#
+#  Excluded on purpose (have their own files):
+#    - core/systemapi.py    -> requirements-systemapi.txt  (Windows-only, pywin32)
+#    - apis/tts-copilt.py   -> requirements-tts.txt        (requires Python 3.10)
+#
+#  Install:  pip install -r requirements.txt
+# ============================================================
+
+requests>=2.31.0          # apis/farm_harvest-server.py , core/llm-server.py , core/chat-server.py
+beautifulsoup4>=4.12.0    # (bs4)  apis/farm_harvest-server.py , apis/internet_api.py
+urllib3>=2.0.0            # apis/farm_harvest-server.py
+httpx>=0.27.0             # apis/internet_api.py
+flask>=3.0.0              # core/chat-server.py
+psutil>=5.9.0             # core/llm-server.py
+tiktoken>=0.7.0           # core/llm-server.py
+
+# Notes:
+# - These files use only the Python standard library (no install needed):
+#     apis/farm_client.py , apis/fileapi.py

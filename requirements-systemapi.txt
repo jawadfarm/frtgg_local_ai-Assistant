@@ -1,0 +1,10 @@
+# ============================================================
+#  systemapi server dependencies  (core/systemapi.py)
+#  WINDOWS ONLY — not cross-platform (depends on pywin32 / ctypes WinAPI)
+#  Kept separate so it never breaks installs on Linux/macOS.
+#
+#  Install (Windows only):  pip install -r requirements-systemapi.txt
+# ============================================================
+
+psutil>=5.9.0             # process enumeration (cross-platform, but required here)
+pywin32>=306              # win32api / win32con / win32security  (Windows-only de-elevation)

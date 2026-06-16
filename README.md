@@ -1,4 +1,4 @@
-# frtgg
+# frtgg Local ai Assistant
 
 <p align="center">
   <img src="logo.png" alt="frtgg logo" width="200"/>

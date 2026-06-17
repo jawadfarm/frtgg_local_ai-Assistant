@@ -150,7 +150,7 @@ The system runs entirely over the network. You have the flexibility to change wh
 -  **Screen Vision**
 - **stt-speak to text** 
 -  **MCP protocol support ** 
-   **Enhanced support and bug fixes** 
+- **Enhanced support and bug fixes** 
 -  **memory** 
 -  **skills**
 

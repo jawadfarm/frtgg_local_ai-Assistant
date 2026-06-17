@@ -149,7 +149,7 @@ The system runs entirely over the network. You have the flexibility to change wh
 ###  Coming Soon
 -  **Screen Vision**
 - **stt-speak to text** 
--  **MCP protocol support ** 
+-  **MCP protocol support** 
 - **Enhanced support and bug fixes** 
 -  **memory** 
 -  **skills**

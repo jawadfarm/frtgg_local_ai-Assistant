@@ -52,6 +52,7 @@ FRTGG is a **local AI assistant** that runs entirely on your computer. Unlike cl
 ### Install
 ```bash
 git clone https://github.com/jawadfarm/frtgg_local_ai-Assistant.git
+cd frtgg_local_ai-Assistant
 ```
 
 ### Run

@@ -34,7 +34,7 @@ FRTGG is a **local AI assistant** that runs entirely on your computer. Unlike cl
 
 ### Requirements
 - Windows 10/11
-- Python 3.10
+- Python 3.10+
 - A GGUF model file (download from [HuggingFace](https://huggingface.co/models?library=gguf))
 
 ## Supported Platforms

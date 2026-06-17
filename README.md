@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" alt="FRTGG Logo" width="200" />
+</p>
+
 # FRTGG — Your PC's Native AI
 
 > An AI assistant that doesn't just chat. It lives inside your PC, understands it, and controls it.

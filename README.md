@@ -2,7 +2,7 @@
   <img src="logo.png" alt="FRTGG Logo" width="200" />
 </p>
 
-# FRTGG — Your PC's Native AI
+# FRTGG — Your PC's Native AI (MVP)
 
 > An AI assistant that doesn't just chat. It lives inside your PC, understands it, and controls it.
 

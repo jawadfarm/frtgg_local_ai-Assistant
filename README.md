@@ -59,9 +59,9 @@ git clone https://github.com/jawadfarm/frtgg_local_ai-Assistant.git
 # 1. start the installer
 python installer.py
 
-#2. install runner requirements
+#2. install Flask
 
-pip install -r runner-requirements.txt
+pip install flask
 
 # 3. install llama.cpp
 cd core

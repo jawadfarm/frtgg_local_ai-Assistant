@@ -163,7 +163,7 @@ The system runs entirely over the network. You have the flexibility to change wh
 
 ## License
 
-MIT — Free to use, modify, and distribute.
+MIT — Free to use, modify
 
 ---
 

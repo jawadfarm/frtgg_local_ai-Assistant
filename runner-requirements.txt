@@ -1,0 +1,12 @@
+# ══════════════════════════════════════════════════════════════════════════
+#  requirements.txt — runner.py dependencies
+# --------------------------------------------------------------------------
+#  Install with:  pip install -r requirements.txt
+# ══════════════════════════════════════════════════════════════════════════
+
+# Web framework — Flask API + static file serving (dashboard)
+Flask>=2.3.0
+
+# Process & system monitoring — used for liveness checks, port scanning,
+# and process tree management (imported dynamically, but required)
+psutil>=5.9.0

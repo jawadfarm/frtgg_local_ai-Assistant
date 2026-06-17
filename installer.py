@@ -353,6 +353,34 @@ def _pywin32_postinstall(exe):
         log(f"  pywin32 post-install skipped: {e}")
 
 
+def install_flask_system():
+    """Install Flask into the SYSTEM Python (sys.executable — the interpreter
+    you launched installer.py with), NOT core/python. runner.py runs under the
+    system Python and needs Flask available there."""
+    log("Installing Flask into the system Python (sys.executable)…")
+    cmd = [sys.executable, "-m", "pip", "install", "flask"]
+    log("  $ " + " ".join(cmd))
+    env = dict(os.environ)
+    env["PYTHONUNBUFFERED"] = "1"
+    proc = subprocess.run(cmd, env=env)
+    if proc.returncode != 0:
+        fail(f"failed to install flask into system Python (exit {proc.returncode})")
+
+
+def run_llama_installer():
+    """Run core/llama-installer.py (downloads llama.cpp) once everything else
+    is in place. Uses the system Python and runs from inside core/ (mirrors the
+    documented `cd core && python llama-installer.py`)."""
+    script = os.path.join(CORE, "llama-installer.py")
+    if not os.path.exists(script):
+        log(f"  {script} not found — skipping llama install")
+        return
+    log("Running llama installer (core/llama-installer.py)…")
+    proc = subprocess.run([sys.executable, script], cwd=CORE)
+    if proc.returncode != 0:
+        fail(f"llama-installer.py failed (exit {proc.returncode})")
+
+
 # ── Step 3: seed config files ────────────────────────────────────────────────
 def seed_configs(force):
     log("Seeding config files in core/ …")
@@ -428,8 +456,12 @@ def main():
 
     exe = acquire_python(args.force)
     installed = install_dependencies(exe)
+    install_flask_system()
     configs = seed_configs(args.force)
     auth_written = setup_auth(args.force)
+
+    # Everything downloaded/installed — now fetch llama.cpp.
+    run_llama_installer()
 
     # ── Summary ──────────────────────────────────────────────────────────
     print("\n" + "=" * 60)

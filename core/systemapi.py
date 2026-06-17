@@ -1539,9 +1539,15 @@ def execute_one_command(command_text: str, api_key: str = None) -> dict:
     if low.startswith("fileapi:"):
         if is_blocked("fileapi:"):
             return {"status": "error", "message": "Service 'fileapi' is blocked."}
-        payload = text[text.lower().find("fileapi:") + len("fileapi:"):].strip()
-        # Drop a trailing END marker if the caller left one in.
-        payload = re.sub(r"(?im)^\s*END\s*$", "", payload).strip()
+        # Strip the "fileapi:" prefix from the start of EVERY command line —
+        # a multi-line block repeats the prefix per line (e.g. "fileapi:addfile x"
+        # / "fileapi:writefile x {"). Only the leading token is removed; the
+        # indentation of file content lines is left completely untouched (NO
+        # per-line or whole-payload strip that would flatten Python code).
+        payload = re.sub(r"(?im)^[ \t]*fileapi:[ \t]*", "", text)
+        # Drop a trailing END marker if the caller left one in — send_to_fileapi
+        # appends its own. Removed from the very end only; body is untouched.
+        payload = re.sub(r"(?im)\n?[ \t]*END[ \t]*\Z", "", payload)
         result = send_to_fileapi(payload, api_key=api_key)
         log_command(first, result)
         if _is_not_connected(result):

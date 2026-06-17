@@ -60,15 +60,8 @@ cd frtgg_local_ai-Assistant
 # 1. start the installer
 python installer.py
 
-#2. install Flask
-
-pip install flask
-
-# 3. install llama.cpp
-cd core
-python llama-installer.py
-
 # 3. Start the runner
+cd core
 python runner.py
 
 http://localhost:8721

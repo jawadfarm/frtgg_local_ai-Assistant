@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Runner</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="favicon-180.png">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05070a; --s1:#090c10; --s2:#0d1117; --s3:#111820;
+  --border:#16202e; --border2:#1e2d40;
+  --txt:#8aacbe; --txtbr:#c8e0f0; --muted:#2f4458;
+  --cyan:#00e5ff; --cyan2:#0099bb; --cyan-dim:rgba(0,229,255,.09);
+  --green:#39ff7e; --green-dim:rgba(57,255,126,.09);
+  --amber:#ffb300; --orange:#ff7a1a;
+  --red:#ff3c5a; --red-dim:rgba(255,60,90,.1);
+  --purple:#b388ff;
+  --mono:'IBM Plex Mono',monospace; --display:'Bebas Neue',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--mono);background:var(--bg);color:var(--txt);min-height:100vh;font-size:14px}
+.bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 700px 500px at 90% -5%,rgba(0,229,255,.07) 0%,transparent 60%),
+             radial-gradient(ellipse 500px 400px at -5% 100%,rgba(179,136,255,.06) 0%,transparent 60%)}
+a{color:var(--cyan)}
+button{font-family:var(--mono);cursor:pointer}
+
+/* ── LOGIN ── */
+#login-overlay{position:fixed;inset:0;z-index:9000;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;transition:opacity .4s ease}
+#login-overlay.hidden{opacity:0;pointer-events:none}
+.login-box{position:relative;width:360px;border:1px solid var(--border2);border-radius:14px;
+  background:var(--s1);padding:34px 30px 26px;box-shadow:0 0 60px rgba(0,229,255,.07)}
+.login-accent{position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0;
+  background:linear-gradient(90deg,var(--cyan2),var(--cyan),var(--cyan2));
+  background-size:200% 100%;animation:shim 2.5s linear infinite}
+@keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.login-logo{text-align:center;margin-bottom:26px}
+.login-logo-icon{width:58px;height:58px;margin:0 auto 12px;display:flex;align-items:center;
+  justify-content:center}
+.login-logo-icon img{width:100%;height:100%;object-fit:contain}
+.login-logo-name{font-family:var(--display);font-size:30px;letter-spacing:2px;color:var(--txtbr)}
+.login-logo-sub{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+.login-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block}
+.login-input-wrap{position:relative;margin-bottom:16px}
+.login-input{width:100%;background:var(--s2);border:1px solid var(--border2);border-radius:9px;
+  color:var(--txtbr);font-family:var(--mono);font-size:14px;padding:12px 40px 12px 14px;outline:none}
+.login-input:focus{border-color:var(--cyan)}
+.login-eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;
+  color:var(--muted);font-size:15px;padding:4px}
+.btn{background:var(--s2);border:1px solid var(--border2);border-radius:9px;color:var(--txtbr);
+  font-size:12px;letter-spacing:1px;padding:10px 14px;text-transform:uppercase;transition:.15s}
+.btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.btn.primary{width:100%;background:linear-gradient(135deg,var(--cyan2),var(--cyan));color:#02141a;
+  border:none;font-weight:700;padding:13px}
+.btn.primary:hover{filter:brightness(1.1)}
+.btn.danger:hover{border-color:var(--red);color:var(--red)}
+.btn.go:hover{border-color:var(--green);color:var(--green)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.login-error{display:none;margin-top:12px;color:var(--red);font-size:11px;
+  background:var(--red-dim);border:1px solid var(--red);border-radius:8px;padding:8px 10px}
+.login-error.show{display:block}
+.login-footer{text-align:center;font-size:10px;color:var(--muted);letter-spacing:1px;margin-top:14px}
+
+/* ── APP ── */
+#app{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:22px 20px 60px;display:none}
+#app.show{display:block}
+header{display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:20px}
+.h-left{display:flex;align-items:center;gap:12px}
+.h-icon{width:42px;height:42px;display:flex;align-items:center;justify-content:center}
+.h-icon img{width:100%;height:100%;object-fit:contain}
+.h-title{font-family:var(--display);font-size:30px;letter-spacing:2px;color:var(--txtbr);line-height:1}
+.h-sub{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.h-right{display:flex;align-items:center;gap:10px}
+.conn{display:flex;align-items:center;gap:6px;font-size:11px;border:1px solid var(--border2);
+  border-radius:20px;padding:5px 12px}
+.conn .dot{width:8px;height:8px;border-radius:50%;background:var(--red)}
+.conn.ok .dot{background:var(--green);box-shadow:0 0 8px var(--green)}
+
+.toolbar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.section-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);
+  margin:26px 0 12px;border-bottom:1px solid var(--border);padding-bottom:6px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:16px}
+.card.active{border-color:var(--cyan)}
+.card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.svc-name{font-size:15px;color:var(--txtbr);font-weight:600;letter-spacing:.5px}
+.badge{font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:20px;
+  border:1px solid var(--border2);color:var(--muted)}
+.stat{display:flex;align-items:center;gap:7px;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.stat .dot{width:9px;height:9px;border-radius:50%;background:var(--red)}
+.stat.running{color:var(--green)}
+.stat.running .dot{background:var(--green);box-shadow:0 0 8px var(--green)}
+.stat.stopped{color:var(--muted)}
+.svc-ports{font-size:11px;color:var(--cyan);letter-spacing:.5px;margin-bottom:6px;word-break:break-all}
+.svc-ports.dim{color:var(--muted)}
+.svc-src{font-size:10px;color:var(--muted);word-break:break-all;margin-bottom:12px;min-height:13px}
+.card-actions{display:flex;gap:8px}
+.card-actions .btn{flex:1;padding:8px;font-size:11px}
+
+/* ── LOGS ── */
+.log-head{display:flex;align-items:center;justify-content:space-between;margin:26px 0 10px}
+#log-name{font-size:12px;color:var(--cyan);letter-spacing:1px}
+#log{background:#02050a;border:1px solid var(--border);border-radius:10px;padding:14px;
+  height:300px;overflow:auto;font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-all;color:var(--txt)}
+#log .err{color:var(--red)}
+#log .sys{color:var(--amber)}
+
+/* ── PANELS ── */
+.panel{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:18px;margin-top:14px}
+.panel h3{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--txtbr);margin-bottom:14px;font-weight:600}
+.field{margin-bottom:14px}
+.field label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block}
+.field input[type=text],.field input[type=password]{width:100%;background:var(--s2);border:1px solid var(--border2);
+  border-radius:8px;color:var(--txtbr);font-family:var(--mono);font-size:13px;padding:10px 12px;outline:none}
+.field input:focus{border-color:var(--cyan)}
+.check{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--txt);margin-bottom:10px}
+.check input{width:16px;height:16px;accent-color:var(--cyan)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.msg{font-size:11px;margin-top:8px;min-height:14px}
+.msg.ok{color:var(--green)}
+.msg.err{color:var(--red)}
+.hint{font-size:10px;color:var(--muted);margin-top:4px}
+@media(max-width:720px){.two{grid-template-columns:1fr}}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;right:20px;z-index:9500;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--s2);border:1px solid var(--border2);border-left:3px solid var(--cyan);
+  border-radius:8px;padding:11px 16px;font-size:12px;color:var(--txtbr);min-width:200px;
+  animation:tin .25s ease}
+.toast.err{border-left-color:var(--red)}
+.toast.ok{border-left-color:var(--green)}
+@keyframes tin{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="bg-canvas"></div>
+
+<!-- LOGIN -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-accent"></div>
+    <div class="login-logo">
+      <div class="login-logo-icon"><img src="logo.png" alt="logo"></div>
+      <div class="login-logo-name">RUNNER</div>
+      <div class="login-logo-sub">server supervisor · access required</div>
+    </div>
+    <label class="login-label" for="login-pw">password</label>
+    <div class="login-input-wrap">
+      <input id="login-pw" class="login-input" type="password" placeholder="••••••••••••"
+             autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="login-eye" onclick="toggleEye()" title="show/hide">👁</button>
+    </div>
+    <button class="btn primary" id="login-btn" onclick="doLogin()">authenticate</button>
+    <div class="login-error" id="login-error"><span id="login-error-msg">wrong password</span></div>
+    <div class="login-footer">secure · local · supervisor</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="h-left">
+      <div class="h-icon"><img src="logo.png" alt="logo"></div>
+      <div>
+        <div class="h-title">RUNNER</div>
+        <div class="h-sub" id="h-sub">core supervisor</div>
+      </div>
+    </div>
+    <div class="h-right">
+      <div class="conn" id="conn"><div class="dot"></div><span id="conn-text">connecting…</span></div>
+      <button class="btn danger" onclick="doLogout()">⏻ logout</button>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button class="btn go" onclick="startGroup('core')">▶ run core</button>
+    <button class="btn go" onclick="startGroup('apis')">▶ run apis</button>
+    <button class="btn go" onclick="startAll()">▶ run full system</button>
+    <button class="btn danger" onclick="stopAll()">■ stop all</button>
+    <button class="btn" onclick="forceRefresh()">⟳ refresh</button>
+  </div>
+
+  <div id="sections"></div>
+
+  <div class="log-head">
+    <div class="section-title" style="margin:0;border:none">logs · <span id="log-name">—</span></div>
+    <button class="btn" onclick="clearLogView()">clear view</button>
+  </div>
+  <div id="log"></div>
+
+  <div class="two">
+    <!-- ADD FILE -->
+    <div class="panel">
+      <h3>＋ add file / service</h3>
+      <div class="field">
+        <label for="add-path">file path</label>
+        <input id="add-path" type="text" placeholder="C:\path\to\service.py">
+        <div class="hint" id="add-hint"></div>
+      </div>
+      <label class="check"><input id="add-310" type="checkbox"> run .py with bundled Python 3.10 (TTS engine)</label>
+      <button class="btn primary" onclick="addFile()">add &amp; start</button>
+      <div class="msg" id="add-msg"></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="panel">
+      <h3>⚙ settings</h3>
+      <label class="check"><input id="cfg-private" type="checkbox" onchange="saveConfig()"> allow private / LAN network</label>
+      <label class="check"><input id="cfg-public" type="checkbox" onchange="saveConfig()"> allow public network</label>
+      <div class="hint" style="margin-bottom:14px">Off = localhost only. Bind stays 0.0.0.0; access is gated per request.</div>
+      <div class="field" style="margin-bottom:8px">
+        <label for="cp-old">current password <span id="cp-old-note" style="color:var(--muted)">(not needed from localhost)</span></label>
+        <input id="cp-old" type="password" placeholder="current password">
+      </div>
+      <div class="field">
+        <label for="cp-new">new password</label>
+        <input id="cp-new" type="password" placeholder="new password">
+      </div>
+      <button class="btn" onclick="changePassword()">change password</button>
+      <div class="msg" id="cp-msg"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="runner.js?v=6"></script>
+</body>
+</html>

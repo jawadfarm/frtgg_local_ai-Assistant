@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Server Settings</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:         #070a0f;
+  --s1:         #0d1219;
+  --s2:         #111820;
+  --s3:         #161e2c;
+  --border:     #1f2f42;
+  --border2:    #2a3f58;
+  --cyan:       #29ecff;
+  --green:      #4dffaa;
+  --green-dim:  rgba(77,255,170,.09);
+  --red:        #ff4d6a;
+  --red-dim:    rgba(255,77,106,.09);
+  --amber:      #ffc200;
+  --purple:     #a78bfa;
+  --purple-dim: rgba(167,139,250,.09);
+  --txt:        #b8d0e8;
+  --txt2:       #5a7590;
+  --txtbr:      #e8f6ff;
+  --mono:       'JetBrains Mono', monospace;
+  --display:    'Syne', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--display); background: var(--bg); color: var(--txt);
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  flex-direction: column;
+}
+.bg-canvas {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 700px 500px at 90% -5%,  rgba(109,40,217,.12) 0%, transparent 60%),
+    radial-gradient(ellipse 500px 400px at -5% 90%,  rgba(60,0,120,.08) 0%, transparent 60%);
+}
+.scanlines {
+  position: fixed; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 3px,
+    rgba(167,139,250,.012) 3px, rgba(167,139,250,.012) 4px
+  );
+}
+.box {
+  position: relative; z-index: 1;
+  width: 420px;
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  background: var(--s1);
+  padding: 36px 32px 28px;
+  box-shadow: 0 0 60px rgba(167,139,250,.08), 0 0 0 1px rgba(167,139,250,.04);
+  animation: boxIn .5s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes boxIn {
+  from { opacity:0; transform: translateY(16px) scale(.97); }
+  to   { opacity:1; transform: translateY(0) scale(1); }
+}
+.accent {
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(90deg, #5b21b6, var(--purple), #5b21b6);
+  background-size: 200% 100%;
+  animation: shimmer 2.5s linear infinite;
+}
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+.logo { text-align: center; margin-bottom: 26px; }
+.logo-icon {
+  width: 60px; height: 60px; border-radius: 15px;
+  background: linear-gradient(135deg, #5b21b6, var(--purple));
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 14px;
+  box-shadow: 0 0 32px rgba(167,139,250,.3), inset 0 1px 0 rgba(255,255,255,.1);
+  font-size: 24px;
+}
+.logo-name { font-size: 22px; font-weight: 800; color: var(--txtbr); letter-spacing: -.3px; }
+.logo-sub  { font-family: var(--mono); font-size: 11px; color: var(--txt2); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+
+.hint {
+  font-family: var(--mono); font-size: 11px; color: var(--txt2);
+  line-height: 1.7; margin-bottom: 20px; padding: 10px 12px;
+  background: var(--purple-dim); border: 1px solid rgba(167,139,250,.15); border-radius: 8px;
+}
+.hint b { color: var(--purple); font-weight: 600; }
+
+.f-label {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--txt2); margin-bottom: 6px; display: block;
+}
+.f-input {
+  width: 100%;
+  background: var(--bg); border: 1px solid var(--border2); border-radius: 8px;
+  padding: 11px 14px; color: var(--txtbr);
+  font-family: var(--mono); font-size: 14px; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  margin-bottom: 16px;
+}
+.f-input:focus { border-color: rgba(167,139,250,.5); box-shadow: 0 0 0 3px rgba(167,139,250,.1); }
+.f-input::placeholder { color: var(--txt2); }
+.row { display: grid; grid-template-columns: 1fr 130px; gap: 12px; }
+
+.save-btn {
+  width: 100%; padding: 12px;
+  background: rgba(167,139,250,.1);
+  border: 1px solid rgba(167,139,250,.3);
+  border-radius: 8px; color: var(--purple);
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer; transition: background .15s, box-shadow .15s; margin-top: 4px;
+}
+.save-btn:hover { background: rgba(167,139,250,.18); box-shadow: 0 0 24px rgba(167,139,250,.18); }
+.save-btn:active { transform: scale(.99); }
+.save-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.status {
+  margin-top: 14px; font-family: var(--mono); font-size: 11px;
+  line-height: 1.9; min-height: 20px; color: var(--txt2);
+  word-break: break-word;
+}
+.status .ok   { color: var(--green); }
+.status .err  { color: var(--red); }
+.status .info { color: var(--cyan); }
+
+.back-link {
+  display: block; text-align: center; margin-top: 18px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+  color: var(--txt2); text-decoration: none; transition: color .15s;
+}
+.back-link:hover { color: var(--purple); }
+.footer { margin-top: 16px; text-align: center; font-family: var(--mono); font-size: 10px; color: var(--txt2); letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<div class="bg-canvas"></div>
+<div class="scanlines"></div>
+
+<div class="box">
+  <div class="accent"></div>
+  <div class="logo">
+    <div class="logo-icon">⚙️</div>
+    <div class="logo-name">Server Settings</div>
+    <div class="logo-sub">connection · configuration</div>
+  </div>
+
+  <div class="hint">
+    Enter the <b>server address</b>. The app first tries it directly; if that
+    fails it asks the server for its settings (<b>GET /server_settings</b>) and
+    connects to the Prompt API automatically.
+  </div>
+
+  <div class="row">
+    <div>
+      <label class="f-label" for="srv-ip">server ip</label>
+      <input id="srv-ip" class="f-input" placeholder="127.0.0.1" spellcheck="false"
+             onkeydown="if(event.key==='Enter') doSave()">
+    </div>
+    <div>
+      <label class="f-label" for="srv-port">port</label>
+      <input id="srv-port" class="f-input" placeholder="8112" type="number"
+             onkeydown="if(event.key==='Enter') doSave()">
+    </div>
+  </div>
+
+  <button class="save-btn" id="save-btn" onclick="doSave()">save &amp; connect</button>
+
+  <div class="status" id="status"></div>
+
+  <a class="back-link" href="prompt_manager.html">← back to login (without saving)</a>
+  <div class="footer">settings stored locally · used for all future logins</div>
+</div>
+
+<script src="./net_config.js"></script>
+<script>
+function _status(msg, cls) {
+  const el = document.getElementById('status');
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = msg;
+  el.appendChild(line);
+  while (el.children.length > 6) el.removeChild(el.firstChild);
+}
+function _clearStatus() { document.getElementById('status').innerHTML = ''; }
+
+async function doSave() {
+  const host = document.getElementById('srv-ip').value.trim();
+  const port = document.getElementById('srv-port').value;
+  const btn  = document.getElementById('save-btn');
+  _clearStatus();
+  btn.disabled = true;
+  try {
+    const resolved = await netResolveAndSave(host, port, m => _status(m, 'info'));
+    _status(`✓ connected — Prompt API at ${resolved.promptapi.host}:${resolved.promptapi.port}`, 'ok');
+    _status('returning to login …', 'ok');
+    setTimeout(() => { window.location.href = 'prompt_manager.html'; }, 900);
+  } catch (e) {
+    _status(`✕ ${e.message}`, 'err');
+    btn.disabled = false;
+  }
+}
+
+// Pre-fill from saved settings: llm_server first, promptapi as fallback.
+(function init() {
+  const saved = netLoad();
+  const pre = saved.llm_server?.host ? netGetLlm()
+            : saved.promptapi?.host  ? netGetPromptApi()
+            : netGetLlm();   // defaults
+  document.getElementById('srv-ip').value   = pre.host;
+  document.getElementById('srv-port').value = pre.port;
+  setTimeout(() => document.getElementById('srv-ip').focus(), 120);
+})();
+</script>
+</body>
+</html>

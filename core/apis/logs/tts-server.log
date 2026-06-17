@@ -1,0 +1,133 @@
+2026-06-16 05:27:46  INFO     ============================================================
+2026-06-16 05:27:46  INFO     TTS Server starting up
+2026-06-16 05:27:46  INFO     Log file: C:\Users\frtgg\Documents\project_files\core\apis\logs\tts-server.log
+2026-06-16 05:27:46  INFO     Created default settings file: C:\Users\frtgg\Documents\project_files\core\apis\tts-settings.json
+2026-06-16 05:27:46  INFO     Settings | port=8113 local=True public=False
+2026-06-16 05:28:33  INFO     ============================================================
+2026-06-16 05:28:33  INFO     TTS Server starting up
+2026-06-16 05:28:33  INFO     Log file: C:\Users\frtgg\Documents\project_files\core\apis\logs\tts-server.log
+2026-06-16 05:28:33  INFO     Settings | port=8113 local=True public=False
+2026-06-16 05:28:59  INFO     ============================================================
+2026-06-16 05:28:59  INFO     TTS Server starting up
+2026-06-16 05:28:59  INFO     Log file: C:\Users\frtgg\Documents\project_files\core\apis\logs\tts-server.log
+2026-06-16 05:28:59  INFO     Settings | port=8113 local=True public=False
+2026-06-16 05:28:59  INFO     Starting audio_player thread
+2026-06-16 05:28:59  INFO     Starting tts_worker thread
+2026-06-16 05:28:59  INFO     Server listening on 0.0.0.0:8113
+2026-06-16 05:37:09  INFO     ============================================================
+2026-06-16 05:37:09  INFO     TTS Server starting up
+2026-06-16 05:37:09  INFO     Log file: C:\Users\frtgg\Documents\project_files\core\apis\logs\tts-server.log
+2026-06-16 05:37:09  INFO     Settings | port=8113 local=True public=False auto_load=True
+2026-06-16 05:37:09  INFO     Starting audio_player thread
+2026-06-16 05:37:09  INFO     Starting tts_worker thread
+2026-06-16 05:37:09  INFO     Loading XTTS model on startup (first run also downloads it — this can take a while)...
+2026-06-16 05:37:09  INFO     Loading model on cpu (CPU)
+2026-06-16 05:39:49  INFO     ============================================================
+2026-06-16 05:39:49  INFO     TTS Server starting up
+2026-06-16 05:39:49  INFO     Log file: C:\Users\frtgg\Documents\project_files\core\apis\logs\tts-server.log
+2026-06-16 05:39:49  INFO     Settings | port=8113 local=True public=False auto_load=True
+2026-06-16 05:39:49  INFO     Starting audio_player thread
+2026-06-16 05:39:49  INFO     Starting tts_worker thread
+2026-06-16 05:39:49  INFO     Loading XTTS model on startup (first run also downloads it — this can take a while)...
+2026-06-16 05:39:49  INFO     Loading model on cpu (CPU)
+2026-06-16 06:07:33  INFO     ============================================================
+2026-06-16 06:07:33  INFO     TTS Server starting up
+2026-06-16 06:07:33  INFO     Log file: C:\Users\frtgg\Documents\project_files\core\apis\logs\tts-server.log
+2026-06-16 06:07:33  INFO     Settings | port=8113 local=True public=False auto_load=True
+2026-06-16 06:07:33  INFO     Starting audio_player thread
+2026-06-16 06:07:33  INFO     Starting tts_worker thread
+2026-06-16 06:07:33  INFO     Loading XTTS model on startup (first run also downloads it — this can take a while)...
+2026-06-16 06:07:33  INFO     Loading model on cuda:0 (NVIDIA CUDA)
+2026-06-16 06:07:47  INFO     Extracting speaker latents...
+2026-06-16 06:07:49  INFO     gpt_cond_latent shape: torch.Size([1, 32, 1024])
+2026-06-16 06:07:49  INFO     speaker_embedding shape: torch.Size([1, 512, 1])
+2026-06-16 06:07:49  INFO     Warming up (3 passes)...
+2026-06-16 06:07:55  INFO     Warmup done — model ready
+2026-06-16 06:07:55  INFO     Model READY on cuda:0 (NVIDIA CUDA) — loaded in 21.3s
+2026-06-16 06:07:55  INFO     Server listening on 0.0.0.0:8113
+2026-06-16 06:11:22  INFO     REQ #00001 | from=127.0.0.1:25426 | recv=0.0ms | len=60 | text='Got it. Let me know if you need anything else before you go.'
+2026-06-16 06:11:22  INFO     REQ #00001 | action=QUEUED (queue_size≈1)
+2026-06-16 06:11:22  INFO     TTS start | text='Got it. Let me know if you need anything else before you go.'
+2026-06-16 06:11:22  DEBUG    TTS split  | 2 chunk(s): ['Got it.', 'Let me know if you need anything else before you go.']
+2026-06-16 06:11:23  DEBUG    TTS chunk  | [0] gen=1022ms  dur=592ms  RTF=1.73
+2026-06-16 06:11:24  DEBUG    TTS chunk  | [1] gen=1840ms  dur=1632ms  RTF=1.13
+2026-06-16 06:11:24  INFO     TTS end    | all chunks queued successfully
+2026-06-16 16:40:27  INFO     ============================================================
+2026-06-16 16:40:27  INFO     TTS Server starting up
+2026-06-16 16:40:27  INFO     Log file: C:\Users\frtgg\Documents\project_files\core\apis\logs\tts-server.log
+2026-06-16 16:40:27  INFO     Settings | port=8113 local=True public=False auto_load=True
+2026-06-16 16:40:27  INFO     Starting audio_player thread
+2026-06-16 16:40:27  INFO     Starting tts_worker thread
+2026-06-16 16:40:27  INFO     Loading XTTS model on startup (first run also downloads it — this can take a while)...
+2026-06-16 16:40:27  INFO     Loading model on cuda:0 (NVIDIA CUDA)
+2026-06-16 16:40:41  INFO     Extracting speaker latents...
+2026-06-16 16:40:43  INFO     gpt_cond_latent shape: torch.Size([1, 32, 1024])
+2026-06-16 16:40:43  INFO     speaker_embedding shape: torch.Size([1, 512, 1])
+2026-06-16 16:40:43  INFO     Warming up (3 passes)...
+2026-06-16 16:40:48  INFO     Warmup done — model ready
+2026-06-16 16:40:48  INFO     Model READY on cuda:0 (NVIDIA CUDA) — loaded in 21.1s
+2026-06-16 16:40:48  INFO     Server listening on 0.0.0.0:8113
+2026-06-16 16:43:31  INFO     REQ #00001 | from=127.0.0.1:7059 | recv=0.0ms | len=36 | text='Hey there! How can I help you today?'
+2026-06-16 16:43:31  INFO     REQ #00001 | action=QUEUED (queue_size≈1)
+2026-06-16 16:43:31  INFO     TTS start | text='Hey there! How can I help you today?'
+2026-06-16 16:43:31  DEBUG    TTS split  | 2 chunk(s): ['Hey there!', 'How can I help you today?']
+2026-06-16 16:43:32  DEBUG    TTS chunk  | [0] gen=808ms  dur=552ms  RTF=1.46
+2026-06-16 16:43:33  DEBUG    TTS chunk  | [1] gen=1232ms  dur=1072ms  RTF=1.15
+2026-06-16 16:43:33  INFO     TTS end    | all chunks queued successfully
+2026-06-16 16:43:47  INFO     REQ #00002 | from=127.0.0.1:64018 | recv=0.0ms | len=333 | text="I'm your voice-based PC assistant. I can manage your files—like creating, editing, or deleting them; search the interne
+2026-06-16 16:43:47  INFO     REQ #00002 | action=QUEUED (queue_size≈1)
+2026-06-16 16:43:47  INFO     TTS start | text='I am your voice-based PC assistant. I can manage your files—like creating, editing, or deleting them; search the internet for information; analyze website code; and run system commands like opening apps, checking your network status, or managing processes. Basically, if you need something done on your PC or online, just let me know.'
+2026-06-16 16:43:47  DEBUG    TTS split  | 8 chunk(s): ['I am your voice-based PC assistant.', 'I can manage your files—like creating, editing, or deleting them;', 'search the internet for information;', 'analyze website code;', 'and run system commands like opening apps, checking your network status, or', 'managing processes.', 'Basically, if you need something done on your PC or online, just', 'let me know.']
+2026-06-16 16:43:49  DEBUG    TTS chunk  | [0] gen=1864ms  dur=1808ms  RTF=1.03
+2026-06-16 16:43:52  DEBUG    TTS chunk  | [1] gen=3625ms  dur=3720ms  RTF=0.97
+2026-06-16 16:43:54  DEBUG    TTS chunk  | [2] gen=1753ms  dur=1632ms  RTF=1.07
+2026-06-16 16:43:55  DEBUG    TTS chunk  | [3] gen=1413ms  dur=1248ms  RTF=1.13
+2026-06-16 16:43:59  DEBUG    TTS chunk  | [4] gen=4005ms  dur=4208ms  RTF=0.95
+2026-06-16 16:44:01  DEBUG    TTS chunk  | [5] gen=1474ms  dur=1288ms  RTF=1.14
+2026-06-16 16:44:04  DEBUG    TTS chunk  | [6] gen=3338ms  dur=3408ms  RTF=0.98
+2026-06-16 16:44:05  DEBUG    TTS chunk  | [7] gen=842ms  dur=624ms  RTF=1.35
+2026-06-16 16:44:05  INFO     TTS end    | all chunks queued successfully
+2026-06-16 16:44:42  INFO     REQ #00003 | from=127.0.0.1:56942 | recv=0.0ms | len=81 | text="I've listed all the folders in your user directory. You can see them in the chat."
+2026-06-16 16:44:42  INFO     REQ #00003 | action=QUEUED (queue_size≈1)
+2026-06-16 16:44:42  INFO     TTS start | text='I have listed all the folders in your user directory. You can see them in the chat.'
+2026-06-16 16:44:42  DEBUG    TTS split  | 2 chunk(s): ['I have listed all the folders in your user directory.', 'You can see them in the chat.']
+2026-06-16 16:44:44  DEBUG    TTS chunk  | [0] gen=2235ms  dur=2120ms  RTF=1.05
+2026-06-16 16:44:45  DEBUG    TTS chunk  | [1] gen=1277ms  dur=1072ms  RTF=1.19
+2026-06-16 16:44:45  INFO     TTS end    | all chunks queued successfully
+2026-06-16 16:45:11  INFO     REQ #00004 | from=127.0.0.1:51860 | recv=0.0ms | len=139 | text='I found several folders in your PycharmProjects directory, including some for Qwen and a few others. You can see the fu
+2026-06-16 16:45:11  INFO     REQ #00004 | action=QUEUED (queue_size≈1)
+2026-06-16 16:45:11  INFO     TTS start | text='I found several folders in your PycharmProjects directory, including some for Qwen and a few others. You can see the full list in the chat.'
+2026-06-16 16:45:11  DEBUG    TTS split  | 3 chunk(s): ['I found several folders in your PycharmProjects directory, including some for Qwen', 'and a few others.', 'You can see the full list in the chat.']
+2026-06-16 16:45:15  DEBUG    TTS chunk  | [0] gen=3863ms  dur=4000ms  RTF=0.97
+2026-06-16 16:45:16  DEBUG    TTS chunk  | [1] gen=1282ms  dur=1112ms  RTF=1.15
+2026-06-16 16:45:18  DEBUG    TTS chunk  | [2] gen=1619ms  dur=1496ms  RTF=1.08
+2026-06-16 16:45:18  INFO     TTS end    | all chunks queued successfully
+2026-06-16 16:48:23  INFO     REQ #00005 | from=127.0.0.1:18792 | recv=0.0ms | len=117 | text="I've compiled a long list of all the Python files in that directory for you. You can see them all listed in the chat."
+2026-06-16 16:48:23  INFO     REQ #00005 | action=QUEUED (queue_size≈1)
+2026-06-16 16:48:23  INFO     TTS start | text='I have compiled a long list of all the Python files in that directory for you. You can see them all listed in the chat.'
+2026-06-16 16:48:23  DEBUG    TTS split  | 3 chunk(s): ['I have compiled a long list of all the Python files in', 'that directory for you.', 'You can see them all listed in the chat.']
+2026-06-16 16:48:27  DEBUG    TTS chunk  | [0] gen=4132ms  dur=4144ms  RTF=1.00
+2026-06-16 16:48:28  DEBUG    TTS chunk  | [1] gen=1349ms  dur=1184ms  RTF=1.14
+2026-06-16 16:48:30  DEBUG    TTS chunk  | [2] gen=1723ms  dur=1560ms  RTF=1.10
+2026-06-16 16:48:30  INFO     TTS end    | all chunks queued successfully
+2026-06-16 16:49:29  INFO     REQ #00006 | from=127.0.0.1:29130 | recv=0.0ms | len=110 | text="Hey! I'm still here. Did you want to look at more of that file, or is there something else you need help with?"
+2026-06-16 16:49:29  INFO     REQ #00006 | action=QUEUED (queue_size≈1)
+2026-06-16 16:49:29  INFO     TTS start | text='Hey! I am still here. Did you want to look at more of that file, or is there something else you need help with?'
+2026-06-16 16:49:29  DEBUG    TTS split  | 3 chunk(s): ['Hey! I am still here.', 'Did you want to look at more of that file, or is', 'there something else you need help with?']
+2026-06-16 16:49:31  DEBUG    TTS chunk  | [0] gen=1939ms  dur=1776ms  RTF=1.09
+2026-06-16 16:49:33  DEBUG    TTS chunk  | [1] gen=2424ms  dur=2192ms  RTF=1.11
+2026-06-16 16:49:35  DEBUG    TTS chunk  | [2] gen=1480ms  dur=1184ms  RTF=1.25
+2026-06-16 16:49:35  INFO     TTS end    | all chunks queued successfully
+2026-06-16 16:50:35  INFO     REQ #00007 | from=127.0.0.1:36788 | recv=0.0ms | len=84 | text="I've retrieved the requested lines from systemapi.py and displayed them in the chat."
+2026-06-16 16:50:35  INFO     REQ #00007 | action=QUEUED (queue_size≈1)
+2026-06-16 16:50:35  INFO     TTS start | text='I have retrieved the requested lines from systemapi.py and displayed them in the chat.'
+2026-06-16 16:50:35  DEBUG    TTS split  | 2 chunk(s): ['I have retrieved the requested lines from systemapi.py and displayed them in', 'the chat.']
+2026-06-16 16:50:38  DEBUG    TTS chunk  | [0] gen=3405ms  dur=3584ms  RTF=0.95
+2026-06-16 16:50:39  DEBUG    TTS chunk  | [1] gen=836ms  dur=552ms  RTF=1.51
+2026-06-16 16:50:39  INFO     TTS end    | all chunks queued successfully
+2026-06-16 16:51:18  INFO     REQ #00008 | from=127.0.0.1:36181 | recv=10.2ms | len=84 | text='I\'ve successfully created the new file "systemapi3.py" in your PythonProject folder.'
+2026-06-16 16:51:18  INFO     REQ #00008 | action=QUEUED (queue_size≈1)
+2026-06-16 16:51:18  INFO     TTS start | text='I have successfully created the new file "systemapi3.py" in your PythonProject folder.'
+2026-06-16 16:51:18  DEBUG    TTS split  | 1 chunk(s): ['I have successfully created the new file "systemapi3.py" in your PythonProject folder.']
+2026-06-16 16:51:23  DEBUG    TTS chunk  | [0] gen=4559ms  dur=4976ms  RTF=0.92
+2026-06-16 16:51:23  INFO     TTS end    | all chunks queued successfully

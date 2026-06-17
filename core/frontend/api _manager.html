@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Manager · operator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #05070a;
+  --s1:       #090c10;
+  --s2:       #0d1117;
+  --s3:       #111820;
+  --border:   #16202e;
+  --border2:  #1e2d40;
+  --txt:      #8aacbe;
+  --txt2:     #5a7590;   /* secondary text (kept for JS-injected inline styles) */
+  --txtbr:    #c8e0f0;
+  --muted:    #2f4458;
+  --cyan:     #00e5ff;
+  --cyan2:    #0099bb;
+  --green:    #39ff7e;
+  --amber:    #ffb300;
+  --orange:   #ff7a1a;
+  --red:      #ff3c5a;
+  --purple:   #b388ff;
+  --mono:     'IBM Plex Mono', monospace;
+  --display:  'Bebas Neue', sans-serif;
+  --ease-out: cubic-bezier(.16,1,.3,1);
+  --ease-std: cubic-bezier(.4,0,.2,1);
+  --scanlines: rgba(0,0,0,.06);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* icons keep their intrinsic size inside flex layouts — never stretch/squish
+   as columns or the viewport resize */
+svg { flex-shrink: 0; display: block; }
+.ic, .bd-icon, .tdot, .dot, .cmd-sigil, .stat-ico, .brand-mark { flex-shrink: 0; }
+body {
+  font-family: var(--mono);
+  background: var(--bg);
+  color: var(--txt);
+  min-height: 100vh;
+  overflow-x: hidden;
+  isolation: isolate;
+}
+
+/* ── Background ── */
+.bg-canvas {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 820px 520px at 82% -12%, rgba(0,153,187,.10) 0%, transparent 60%),
+    radial-gradient(ellipse 620px 420px at -12% 82%, rgba(0,229,255,.06) 0%, transparent 60%);
+}
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0,229,255,.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,.022) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(ellipse 100% 80% at 50% 0%, #000 30%, transparent 90%);
+}
+/* CRT scanlines over everything */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 998; pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, var(--scanlines) 2px, var(--scanlines) 4px);
+}
+
+.wrap { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 22px 24px 40px; }
+
+/* ── Header ── */
+.op-header {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--s1); border: 1px solid var(--border2); border-radius: 8px;
+  overflow: hidden; margin-bottom: 18px; position: relative;
+  animation: slideDown .45s var(--ease-out) both;
+}
+.op-header .hdr-accent {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: linear-gradient(to bottom, var(--cyan), var(--cyan2));
+}
+.hdr-brand { display: flex; align-items: center; gap: 14px; padding: 16px 24px; }
+.brand-mark {
+  width: 44px; height: 44px; border-radius: 9px; flex-shrink: 0;
+  background: linear-gradient(135deg, #04222e, #062f3d);
+  border: 1px solid rgba(0,229,255,.28);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--cyan); box-shadow: 0 0 22px rgba(0,229,255,.18), inset 0 0 12px rgba(0,229,255,.08);
+}
+.brand-name { font-family: var(--display); font-size: 30px; letter-spacing: 4px; color: var(--cyan); line-height: 1; text-shadow: 0 0 24px rgba(0,229,255,.25); }
+.brand-sub  { font-size: 11px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px; }
+.brand-sub span { color: var(--cyan2); }
+.hdr-right { display: flex; align-items: center; gap: 12px; padding: 0 22px; }
+
+/* ── Status pill ── */
+.pill {
+  display: flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 6px;
+  font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; border: 1px solid;
+}
+.pill .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.pill-live { background: rgba(57,255,126,.07); border-color: rgba(57,255,126,.3); color: var(--green); }
+.pill-live .dot { background: var(--green); box-shadow: 0 0 8px var(--green); animation: blink 2s infinite; }
+.pill-dead { background: rgba(255,60,90,.07); border-color: rgba(255,60,90,.3); color: var(--red); }
+.pill-dead .dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+/* ── Bridge-down banner ── */
+.bridge-down {
+  display: none; align-items: center; gap: 14px; padding: 13px 18px; margin-bottom: 16px; border-radius: 8px;
+  background: rgba(255,60,90,.06); border: 1px solid rgba(255,60,90,.3); border-left: 3px solid var(--red);
+  color: var(--red); font-size: 12px; animation: fadeUp .3s var(--ease-out) both;
+}
+.bridge-down.show { display: flex; }
+.bridge-down .bd-icon { flex-shrink: 0; display: flex; }
+.bridge-down .bd-msg { flex: 1; line-height: 1.6; color: #ffaab6; }
+.bridge-down .bd-url { color: var(--amber); font-weight: 700; }
+
+/* ── Stats ── */
+.stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 18px; animation: fadeUp .45s .05s var(--ease-out) both; }
+.stat {
+  background: var(--s1); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px;
+  display: flex; align-items: center; gap: 14px; transition: border-color .2s var(--ease-std), transform .2s var(--ease-std); position: relative; overflow: hidden;
+}
+.stat::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; opacity: .6; }
+.stat:nth-child(1)::after { background: var(--cyan); }
+.stat:nth-child(2)::after { background: var(--green); }
+.stat:nth-child(3)::after { background: var(--red); }
+.stat:nth-child(4)::after { background: var(--amber); }
+.stat:hover { transform: translateY(-2px); border-color: var(--border2); }
+.stat-ico { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ico-cyan  { background: rgba(0,229,255,.07);  border: 1px solid rgba(0,229,255,.18); color: var(--cyan); }
+.ico-green { background: rgba(57,255,126,.07); border: 1px solid rgba(57,255,126,.18); color: var(--green); }
+.ico-red   { background: rgba(255,60,90,.07);  border: 1px solid rgba(255,60,90,.18); color: var(--red); }
+.ico-amber { background: rgba(255,179,0,.07);  border: 1px solid rgba(255,179,0,.18); color: var(--amber); }
+.stat-val { font-family: var(--display); font-size: 34px; letter-spacing: 1px; color: var(--txtbr); line-height: .9; font-variant-numeric: tabular-nums; }
+.stat-lbl { font-size: 10px; color: var(--muted); margin-top: 5px; letter-spacing: 1.5px; text-transform: uppercase; }
+
+/* ── Tabs ── */
+.tab-bar {
+  display: flex; gap: 2px; padding: 6px; margin-bottom: 16px; flex-wrap: wrap;
+  background: var(--s1); border: 1px solid var(--border); border-radius: 8px; animation: fadeUp .45s .1s var(--ease-out) both;
+}
+.tab-btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 5px; border: 1px solid transparent;
+  cursor: pointer; font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--muted); background: transparent; transition: all .15s var(--ease-std); white-space: nowrap;
+}
+.tab-btn .tdot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .5; }
+.tab-btn:hover { color: var(--txtbr); background: rgba(255,255,255,.03); }
+.tab-btn.active { color: var(--cyan); background: rgba(0,229,255,.08); border-color: rgba(0,229,255,.25); }
+.tab-btn.active .tdot { opacity: 1; box-shadow: 0 0 6px var(--cyan); }
+.tab-btn.prompt-tab:hover { color: var(--purple); background: rgba(179,136,255,.08); border-color: rgba(179,136,255,.25); }
+.tab-panel { display: none; animation: fadeUp .28s var(--ease-out) both; }
+.tab-panel.active { display: block; }
+
+/* ── Card ── */
+.card { background: var(--s1); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.card.accent-cyan  { border-color: rgba(0,229,255,.18); }
+.card.accent-green { border-color: rgba(57,255,126,.18); }
+.card.accent-red   { border-color: rgba(255,60,90,.2); }
+.card-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 13px 18px; background: var(--s2); border-bottom: 1px solid var(--border); position: relative;
+}
+.card-head::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 38%; height: 1px; background: linear-gradient(90deg, rgba(0,229,255,.3), transparent); }
+.card-title { font-size: 11px; font-weight: 600; color: var(--cyan); letter-spacing: 2px; text-transform: uppercase; display: flex; align-items: center; gap: 9px; }
+.card-title .ic { color: var(--cyan2); display: flex; }
+.tag { font-size: 10px; padding: 4px 10px; border-radius: 4px; background: rgba(0,229,255,.07); color: var(--cyan); border: 1px solid rgba(0,229,255,.18); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+
+/* ── Table ── */
+.tbl-head { display: grid; grid-template-columns: 1fr 150px 80px 120px 130px; padding: 10px 18px; background: var(--s2); border-bottom: 1px solid var(--border); }
+.tbl-head span { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
+.tbl-head span:nth-child(3), .tbl-head span:nth-child(4) { text-align: center; }
+.tbl-head span:last-child { text-align: right; }
+.svc-row { display: grid; grid-template-columns: 1fr 150px 80px 120px 130px; align-items: center; padding: 13px 18px; border-bottom: 1px solid var(--border); transition: background .15s var(--ease-std); animation: fadeIn .3s ease both; }
+.svc-row:last-child { border-bottom: none; }
+.svc-row:hover { background: rgba(0,229,255,.025); }
+.svc-row.blocked-row { background: rgba(255,60,90,.035); }
+.svc-key  { font-size: 13px; color: var(--txtbr); font-weight: 600; display: flex; align-items: center; gap: 9px; }
+.svc-ip   { font-size: 12.5px; color: var(--txt); }
+.svc-port { font-size: 13px; color: var(--amber); text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.block-badge { display: flex; align-items: center; justify-content: center; }
+.badge-blocked, .badge-allowed, .badge-avail { font-size: 9px; padding: 3px 8px; border-radius: 4px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.badge-blocked { background: rgba(255,60,90,.1);  color: var(--red);    border: 1px solid rgba(255,60,90,.3); }
+.badge-allowed { background: rgba(57,255,126,.08); color: var(--green); border: 1px solid rgba(57,255,126,.22); }
+.badge-avail   { background: rgba(179,136,255,.1); color: var(--purple); border: 1px solid rgba(179,136,255,.3); }
+.svc-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.ico-btn {
+  width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border); background: var(--s3); color: var(--muted);
+  cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .14s var(--ease-std);
+}
+.ico-btn:active { transform: scale(.92); }
+.ico-btn.t:hover { border-color: rgba(57,255,126,.4); color: var(--green); background: rgba(57,255,126,.08); }
+.ico-btn.e:hover { border-color: rgba(255,179,0,.4);  color: var(--amber); background: rgba(255,179,0,.08); }
+.ico-btn.d:hover { border-color: rgba(255,60,90,.4);  color: var(--red);   background: rgba(255,60,90,.08); }
+.ico-btn.b:hover { border-color: rgba(255,60,90,.4);  color: var(--red);   background: rgba(255,60,90,.08); }
+.ico-btn.b.is-blocked { border-color: rgba(255,60,90,.4); color: var(--red); background: rgba(255,60,90,.08); }
+.ico-btn.b.is-blocked:hover { border-color: rgba(57,255,126,.4); color: var(--green); background: rgba(57,255,126,.08); }
+.svc-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); transition: all .3s; flex-shrink: 0; }
+.svc-dot.up   { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.svc-dot.down { background: var(--red);   box-shadow: 0 0 8px var(--red); }
+.svc-dot.spin { animation: spin .7s linear infinite; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+.empty { padding: 54px 18px; text-align: center; color: var(--muted); font-size: 13px; letter-spacing: .5px; }
+
+/* ── Console ── */
+.console { background: var(--bg); font-size: 12px; height: 220px; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
+.console::-webkit-scrollbar { width: 3px; }
+.console::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.log { display: flex; gap: 12px; animation: fadeIn .2s ease; line-height: 1.55; }
+.log-ts  { color: var(--muted); flex-shrink: 0; font-size: 11px; }
+.log-msg { word-break: break-all; }
+.log-msg.ok   { color: var(--green); }
+.log-msg.err  { color: var(--red); }
+.log-msg.info { color: var(--cyan); }
+.log-msg.warn { color: var(--amber); }
+.log-msg.cmd  { color: var(--txt); }
+.cmd-bar { display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-top: 1px solid var(--border); background: var(--s2); }
+.cmd-prefix { font-size: 15px; color: var(--cyan); flex-shrink: 0; font-weight: 700; }
+
+/* ── Layout ── */
+.main-grid { display: grid; grid-template-columns: 1fr 360px; gap: 16px; align-items: start; }
+.left-col  { display: flex; flex-direction: column; gap: 16px; }
+.sidebar   { display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Form ── */
+.form-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.f-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px; display: block; font-weight: 600; }
+.f-input {
+  width: 100%; background: var(--s2); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px;
+  color: var(--txtbr); font-family: var(--mono); font-size: 12.5px; outline: none; transition: border-color .14s var(--ease-std), box-shadow .14s var(--ease-std);
+}
+.f-input:focus { border-color: var(--cyan2); box-shadow: 0 0 0 2px rgba(0,153,187,.12); }
+.f-input::placeholder { color: var(--muted); }
+.f-input[readonly] { opacity: .5; cursor: default; }
+.f-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.add-divider { display: flex; align-items: center; gap: 10px; font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; }
+.add-divider::before, .add-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.hint { font-size: 10px; color: var(--muted); line-height: 1.5; letter-spacing: .3px; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 16px; border-radius: 6px;
+  border: 1px solid transparent; cursor: pointer; font-family: var(--mono); font-size: 12px; font-weight: 600;
+  letter-spacing: .8px; text-transform: uppercase; transition: background .14s var(--ease-std), box-shadow .14s var(--ease-std), border-color .14s var(--ease-std);
+}
+.btn:active { transform: scale(.97); }
+.btn .ic { display: flex; }
+.btn-cyan   { background: rgba(0,229,255,.08);  color: var(--cyan);   border-color: rgba(0,229,255,.25); }
+.btn-cyan:hover   { background: rgba(0,229,255,.16);  box-shadow: 0 0 18px rgba(0,229,255,.12); }
+.btn-green  { background: rgba(57,255,126,.08); color: var(--green);  border-color: rgba(57,255,126,.25); }
+.btn-green:hover  { background: rgba(57,255,126,.16); box-shadow: 0 0 18px rgba(57,255,126,.12); }
+.btn-amber  { background: rgba(255,179,0,.08);  color: var(--amber);  border-color: rgba(255,179,0,.25); }
+.btn-amber:hover  { background: rgba(255,179,0,.16); }
+.btn-red    { background: rgba(255,60,90,.08);  color: var(--red);    border-color: rgba(255,60,90,.25); }
+.btn-red:hover    { background: rgba(255,60,90,.16); }
+.btn-purple { background: rgba(179,136,255,.08); color: var(--purple); border-color: rgba(179,136,255,.25); }
+.btn-purple:hover { background: rgba(179,136,255,.16); box-shadow: 0 0 18px rgba(179,136,255,.12); }
+.btn-ghost  { background: transparent; color: var(--muted); border-color: var(--border); }
+.btn-ghost:hover  { color: var(--txtbr); border-color: var(--border2); background: rgba(255,255,255,.02); }
+.btn-full { width: 100%; }
+.btn-sm { padding: 6px 12px; font-size: 11px; }
+.btn-row  { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ── JSON area ── */
+.json-area {
+  width: 100%; height: 168px; resize: vertical; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  color: #5de0f8; font-family: var(--mono); font-size: 12px; padding: 12px; outline: none; line-height: 1.7; transition: border-color .14s var(--ease-std);
+}
+.json-area:focus { border-color: var(--cyan2); box-shadow: 0 0 0 2px rgba(0,153,187,.12); }
+.json-area::-webkit-scrollbar { width: 3px; }
+.json-area::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ── Inject ── */
+.inject-grid { display: grid; grid-template-columns: 1fr 300px; gap: 16px; height: 580px; }
+.inject-editor-card { display: flex; flex-direction: column; }
+.inject-banner { padding: 12px 18px; font-size: 11px; color: var(--cyan); background: rgba(0,229,255,.05); border-bottom: 1px solid rgba(0,229,255,.12); line-height: 1.6; letter-spacing: .3px; }
+.inject-textarea { flex: 1; resize: none; background: var(--bg); border: none; outline: none; color: var(--txtbr); font-family: var(--mono); font-size: 12.5px; padding: 16px 18px; line-height: 1.7; width: 100%; }
+.inject-textarea::placeholder { color: var(--muted); }
+.inject-foot { padding: 12px 16px; background: var(--s2); border-top: 1px solid var(--border); display: flex; gap: 10px; flex-shrink: 0; }
+.target-val { font-size: 18px; color: var(--cyan); font-weight: 700; letter-spacing: 1px; }
+
+/* ── Config ── */
+.config-wrap { max-width: 760px; margin: 0 auto; }
+.config-banner { padding: 13px 18px; margin-bottom: 16px; border-radius: 8px; background: rgba(179,136,255,.06); border: 1px solid rgba(179,136,255,.25); border-left: 3px solid var(--purple); font-size: 11.5px; color: #c9b3ff; line-height: 1.65; letter-spacing: .3px; }
+.config-card { border-radius: 8px; overflow: hidden; margin-bottom: 14px; background: var(--s1); border: 1px solid var(--border); display: flex; }
+.config-accent { width: 3px; align-self: stretch; flex-shrink: 0; }
+/* fill colors scoped to the Config side-accent only — must NOT leak onto
+   .card.accent-* (those are border-only, see the .card rules above) */
+.config-accent.accent-cyan   { background: var(--cyan); }
+.config-accent.accent-amber  { background: var(--amber); }
+.config-accent.accent-purple { background: var(--purple); }
+.config-accent.accent-green  { background: var(--green); }
+.config-body { flex: 1; padding: 16px 20px; min-width: 0; }
+.config-label { font-size: 12px; font-weight: 600; color: var(--txtbr); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+.config-label .ic { color: var(--cyan2); display: flex; }
+.config-hint  { font-size: 10.5px; color: var(--muted); margin-bottom: 14px; line-height: 1.5; letter-spacing: .3px; }
+.config-fields { display: grid; grid-template-columns: 1fr 130px; gap: 12px; }
+.config-foot { display: flex; gap: 12px; margin-top: 6px; }
+
+/* ── FileAPI Blocks ── */
+.blocks-info { padding: 13px 18px; background: rgba(255,60,90,.04); border-bottom: 1px solid rgba(255,60,90,.12); font-size: 11px; color: var(--muted); line-height: 1.6; letter-spacing: .3px; }
+.blocks-info b { color: var(--red); font-weight: 700; }
+.blocks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; padding: 18px; }
+.block-card { background: var(--s2); border: 1px solid var(--border); border-radius: 7px; padding: 13px 15px; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: border-color .2s var(--ease-std), background .2s var(--ease-std); }
+.block-card.is-blocked { border-color: rgba(255,60,90,.32); background: rgba(255,60,90,.035); }
+.block-card.is-allowed { border-color: rgba(57,255,126,.18); }
+.block-cmd-name { font-size: 12px; font-weight: 600; color: var(--txtbr); display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0; }
+.block-cmd-name > span:last-child { white-space: nowrap; }
+.block-card > div:last-child { flex-shrink: 0; }
+.cmd-sigil { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: rgba(0,229,255,.07); color: var(--cyan2); border: 1px solid rgba(0,229,255,.18); flex-shrink: 0; text-transform: uppercase; letter-spacing: .5px; }
+.block-status-badge { font-size: 9px; padding: 2px 7px; border-radius: 4px; font-weight: 700; letter-spacing: 1px; flex-shrink: 0; }
+.block-status-badge.blocked { background: rgba(255,60,90,.1);  color: var(--red);   border: 1px solid rgba(255,60,90,.3); }
+.block-status-badge.allowed { background: rgba(57,255,126,.08); color: var(--green); border: 1px solid rgba(57,255,126,.22); }
+
+/* ── Toggle ── */
+.toggle { position: relative; width: 42px; height: 22px; cursor: pointer; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-track { position: absolute; inset: 0; border-radius: 11px; background: var(--s3); transition: background .2s; border: 1px solid var(--border2); }
+.toggle input:checked ~ .toggle-track { background: rgba(255,60,90,.2); border-color: rgba(255,60,90,.4); }
+.toggle-thumb { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: all .2s var(--ease-std); }
+.toggle input:checked ~ .toggle-thumb { left: 23px; background: var(--red); box-shadow: 0 0 8px var(--red); }
+/* cyan variant — used by the Braces toggle (on = cyan, not the destructive red) */
+.toggle-cyan input:checked ~ .toggle-track { background: rgba(0,229,255,.18); border-color: rgba(0,229,255,.4); }
+.toggle-cyan input:checked ~ .toggle-thumb { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+
+/* ── Braces toggle row ── */
+.braces-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: var(--s2); border: 1px solid var(--border); border-radius: 6px; }
+.braces-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
+.braces-hint  { font-size: 10px; color: var(--muted); margin-top: 3px; }
+.braces-ctl   { display: flex; align-items: center; gap: 9px; }
+.braces-state { font-size: 11px; color: var(--muted); min-width: 18px; text-align: right; }
+
+/* ── Modal ── */
+.overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.78); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.overlay.open { opacity: 1; pointer-events: all; }
+.modal { background: var(--s1); border: 1px solid var(--border2); border-radius: 10px; width: 440px; max-width: calc(100vw - 40px); padding: 28px; transform: scale(.95) translateY(10px); transition: transform .2s var(--ease-out); box-shadow: 0 24px 70px rgba(0,0,0,.7), 0 0 50px rgba(0,153,187,.1); }
+.overlay.open .modal { transform: scale(1) translateY(0); }
+.modal-title { font-family: var(--display); font-size: 24px; letter-spacing: 2px; color: var(--txtbr); margin-bottom: 22px; display: flex; align-items: center; gap: 11px; }
+.modal-title .ic { color: var(--cyan); display: flex; }
+.modal-form { display: flex; flex-direction: column; gap: 14px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+.modal-actions .btn { flex: 1; }
+.confirm-msg { color: var(--txt); font-size: 13px; line-height: 1.8; margin-bottom: 20px; }
+.confirm-key { color: var(--red); font-size: 14px; font-weight: 600; }
+
+/* ── Toast ── */
+.toast-wrap { position: fixed; bottom: 26px; right: 26px; z-index: 999; display: flex; flex-direction: column; gap: 9px; }
+.toast { background: var(--s2); border: 1px solid var(--border2); border-radius: 7px; padding: 12px 18px; font-size: 12.5px; display: flex; align-items: center; gap: 11px; box-shadow: 0 10px 32px rgba(0,0,0,.5); animation: fadeUp .24s var(--ease-out) both; max-width: 340px; letter-spacing: .3px; }
+.toast .ti { font-weight: 700; width: 18px; height: 18px; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; }
+.toast.ok   { border-color: rgba(57,255,126,.3);  color: var(--green); } .toast.ok .ti   { background: rgba(57,255,126,.12); }
+.toast.err  { border-color: rgba(255,60,90,.3);   color: var(--red); }   .toast.err .ti  { background: rgba(255,60,90,.12); }
+.toast.info { border-color: rgba(0,229,255,.25);  color: var(--cyan); }  .toast.info .ti { background: rgba(0,229,255,.1); }
+.toast.warn { border-color: rgba(255,179,0,.25);  color: var(--amber); } .toast.warn .ti { background: rgba(255,179,0,.12); }
+
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--cyan2); }
+
+@keyframes slideDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeUp    { from{opacity:0;transform:translateY(10px)}  to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn    { from{opacity:0} to{opacity:1} }
+@keyframes blink     { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes spin      { to{transform:rotate(360deg)} }
+
+@media (max-width: 980px) {
+  .main-grid { grid-template-columns: 1fr; }
+  .inject-grid { grid-template-columns: 1fr; height: auto; }
+  .stats-row { grid-template-columns: repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-canvas"></div>
+<div class="bg-grid"></div>
+<div class="toast-wrap" id="toasts"></div>
+
+<div class="wrap">
+
+  <!-- Header -->
+  <header class="op-header">
+    <div class="hdr-accent"></div>
+    <div class="hdr-brand">
+      <div class="brand-mark">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 6.5l5 5-5 5"/><path d="M12 17h7"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">API MANAGER</div>
+        <div class="brand-sub">services.json &middot; prompt.json &middot; bridge <span id="brandBridge">:8843</span></div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="pill pill-live" id="bridgePill"><span class="dot"></span><span id="bridgePillText">Bridge Running</span></div>
+    </div>
+  </header>
+
+  <!-- Bridge-down banner -->
+  <div class="bridge-down" id="bridgeDownBanner">
+    <span class="bd-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>
+      </svg>
+    </span>
+    <div class="bd-msg">
+      Bridge server unreachable at <span class="bd-url" id="bridgeDownUrl">&mdash;</span>.
+      Enter the bridge IP / port in Server Config and reconnect.
+    </div>
+    <button class="btn btn-cyan btn-sm" onclick="gotoBridgeConfig()" style="flex-shrink:0">Server Config</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-ico ico-cyan"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1.5"/><rect x="3" y="13" width="18" height="5" rx="1.5"/><path d="M7 6.5h.01M7 15.5h.01"/></svg></div>
+      <div><div class="stat-val" id="sTotal">0</div><div class="stat-lbl">Registered</div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-ico ico-green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div><div class="stat-val" id="sUp">0</div><div class="stat-lbl">Reachable</div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-ico ico-red"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+      <div><div class="stat-val" id="sDown">0</div><div class="stat-lbl">Unreachable</div></div>
+    </div>
+    <div class="stat">
+      <div class="stat-ico ico-amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.5"/></svg></div>
+      <div><div class="stat-val" id="sCmds">0</div><div class="stat-lbl">Commands Sent</div></div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('services',this)"><span class="tdot"></span>Services</button>
+    <button class="tab-btn prompt-tab" onclick="goPromptMgr()"><span class="tdot"></span>Prompt Mgr</button>
+    <button class="tab-btn" onclick="switchTab('inject',this)"><span class="tdot"></span>Inject</button>
+    <button class="tab-btn" onclick="switchTab('config',this)"><span class="tdot"></span>Server Config</button>
+    <button class="tab-btn" onclick="switchTab('fileapi',this)"><span class="tdot"></span>FileAPI Blocks</button>
+    <button class="tab-btn" onclick="switchTab('cmdblocks',this)"><span class="tdot"></span>Command Blocks</button>
+  </div>
+
+  <!-- TAB: SERVICES -->
+  <div class="tab-panel active" id="tab-services">
+    <div class="main-grid">
+      <div class="left-col">
+        <div class="card accent-cyan">
+          <div class="card-head">
+            <div class="card-title">Registered Services</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn btn-ghost btn-sm" onclick="testAll()">Test All</button>
+              <div class="tag" id="svcCount">0 services</div>
+            </div>
+          </div>
+          <div class="tbl-head">
+            <span>Key</span><span>IP Address</span><span>Port</span>
+            <span>Status</span><span>Actions</span>
+          </div>
+          <div id="svcList"></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">Operations Log</div>
+            <button class="btn btn-ghost btn-sm" onclick="clearLog()">Clear</button>
+          </div>
+          <div class="console" id="con">
+            <div class="log"><span class="log-ts">--:--:--</span><span class="log-msg info">API Manager ready.</span></div>
+          </div>
+          <div class="cmd-bar">
+            <span class="cmd-prefix">&rsaquo;</span>
+            <input class="f-input" id="cmdInput" style="flex:1"
+              placeholder="Raw command  e.g. __reload_prompt__"
+              onkeydown="if(event.key==='Enter')sendCmd()">
+            <button class="btn btn-cyan btn-sm" onclick="sendCmd()" style="flex-shrink:0">Send</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <div class="card accent-green">
+          <div class="card-head"><div class="card-title">Add Service</div></div>
+          <div class="form-body">
+            <div><label class="f-label">Key</label><input class="f-input" id="aKey" placeholder="e.g. myservice:" spellcheck="false"></div>
+            <div class="f-row">
+              <div><label class="f-label">IP Address</label><input class="f-input" id="aIp" placeholder="127.0.0.1" spellcheck="false"></div>
+              <div><label class="f-label">Port</label><input class="f-input" id="aPort" placeholder="8400" type="number"></div>
+            </div>
+            <div class="braces-row">
+              <div>
+                <div class="braces-label">Braces</div>
+                <div class="braces-hint">collect &#x7B;&#x7D; blocks</div>
+              </div>
+              <div class="braces-ctl">
+                <span id="aBracesLabel" class="braces-state">off</span>
+                <label class="toggle toggle-cyan">
+                  <input type="checkbox" id="aBraces" onchange="_bracesLabel('aBracesLabel', this.checked)">
+                  <div class="toggle-track"></div>
+                  <div class="toggle-thumb"></div>
+                </label>
+              </div>
+            </div>
+            <button class="btn btn-green btn-full" onclick="addService()">Add Service</button>
+          </div>
+        </div>
+
+        <div class="card" style="flex:1">
+          <div class="card-head"><div class="card-title">services.json</div></div>
+          <div class="form-body">
+            <textarea class="json-area" id="jsonBox" spellcheck="false" placeholder='{"internetapi:": {"ip": "127.0.0.1", "port": 8400}}'></textarea>
+            <div class="btn-row">
+              <button class="btn btn-ghost" onclick="loadJson()">Parse</button>
+              <button class="btn btn-cyan"  onclick="syncJson()">Save</button>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-ghost" onclick="fetchRemote()">Reload</button>
+              <button class="btn btn-ghost" onclick="downloadJson()">Download</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: INJECT -->
+  <div class="tab-panel" id="tab-inject">
+    <div class="inject-grid">
+      <div class="card accent-cyan inject-editor-card">
+        <div class="card-head" style="flex-shrink:0">
+          <div class="card-title">Injection Content</div>
+          <span style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">JSON or plain text</span>
+        </div>
+        <div class="inject-banner">
+          Inject context into the AI system prompt at runtime &mdash; JSON or plain text. Persists until cleared.
+        </div>
+        <textarea class="inject-textarea" id="injectEditor"
+          placeholder='{"living_room_light": "ON", "temperature": "24C"}&#10;&#10;# or plain text:&#10;The TV is currently OFF.'></textarea>
+        <div class="inject-foot">
+          <button class="btn btn-ghost" onclick="clearInjectEditor()" style="flex:1">Clear</button>
+          <button class="btn btn-cyan"  onclick="doInject()" style="flex:1">Inject</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card accent-cyan">
+          <div class="card-head"><div class="card-title">Quick Actions</div></div>
+          <div class="form-body">
+            <button class="btn btn-ghost btn-full" onclick="reloadPrompt()" style="justify-content:flex-start">Reload Prompt (prompt.json)</button>
+            <button class="btn btn-red btn-full"   onclick="clearInject()" style="justify-content:flex-start">Clear All Injected Context</button>
+          </div>
+        </div>
+        <div class="card accent-cyan">
+          <div class="card-head"><div class="card-title">Target Connection</div></div>
+          <div class="form-body">
+            <div class="hint">Reads from config &rarr; llm_server</div>
+            <div class="target-val" id="injectTarget">&mdash;</div>
+            <button class="btn btn-ghost btn-sm" onclick="refreshInjectTarget()" style="align-self:flex-start">Refresh</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: SERVER CONFIG -->
+  <div class="tab-panel" id="tab-config">
+    <div class="config-wrap">
+      <div class="config-banner">
+        Enter the llm-server address only. Save &amp; Reload connects to it, reads GET /server_settings,
+        and connects to the Prompt API automatically &mdash; no other connection settings needed.
+      </div>
+
+      <div class="config-card">
+        <div class="config-accent accent-green"></div>
+        <div class="config-body">
+          <div class="config-label">Bridge (API Manager)</div>
+          <div class="config-hint">Where this UI connects to reach services / prompt / config &mdash; reconnect if it's down</div>
+          <div class="config-fields">
+            <div><label class="f-label">Host / IP</label><input class="f-input" id="cfg-bridge-host" placeholder="127.0.0.1" spellcheck="false"></div>
+            <div><label class="f-label">Port</label><input class="f-input" id="cfg-bridge-port" placeholder="8843" type="number"></div>
+          </div>
+          <div style="margin-top:12px"><button class="btn btn-cyan btn-full" onclick="reconnectBridge()">Reconnect Bridge</button></div>
+          <div id="bridge-status" style="font-size:10.5px;margin-top:10px;color:var(--muted)">&mdash;</div>
+        </div>
+      </div>
+
+      <div class="config-card">
+        <div class="config-accent accent-cyan"></div>
+        <div class="config-body">
+          <div class="config-label">LLM Server</div>
+          <div class="config-hint">IP / HTTP port of the llm-server &mdash; the only connection you configure</div>
+          <div class="config-fields">
+            <div><label class="f-label">Host / IP</label><input class="f-input" id="cfg-llm-host" placeholder="127.0.0.1" spellcheck="false"></div>
+            <div><label class="f-label">Port</label><input class="f-input" id="cfg-llm-port" placeholder="8112" type="number"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="config-card">
+        <div class="config-accent accent-amber"></div>
+        <div class="config-body">
+          <div class="config-label">SystemAPI</div>
+          <div class="config-hint">IP / port of the SystemAPI server (APIs + execution)</div>
+          <div class="config-fields">
+            <div><label class="f-label">Host / IP</label><input class="f-input" id="cfg-sys-host" placeholder="127.0.0.1" spellcheck="false"></div>
+            <div><label class="f-label">Port</label><input class="f-input" id="cfg-sys-port" placeholder="8300" type="number"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="config-card">
+        <div class="config-accent accent-purple"></div>
+        <div class="config-body">
+          <div class="config-label">Discovered Server Settings</div>
+          <div class="config-hint">Read-only &mdash; fetched from llm-server via GET /server_settings</div>
+          <div id="discovered-panel" style="font-size:12px;line-height:2;color:var(--txt)">
+            <span style="color:var(--muted)">Not fetched yet &mdash; set the LLM Server and click Save &amp; Reload.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="config-foot">
+        <button class="btn btn-ghost btn-full"  onclick="loadConfig()">Reload</button>
+        <button class="btn btn-purple btn-full" onclick="saveConfig()">Save &amp; Reload Server</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: FILEAPI BLOCKS -->
+  <div class="tab-panel" id="tab-fileapi">
+    <div class="card accent-red" style="max-width:920px;margin:0 auto;">
+      <div class="card-head">
+        <div class="card-title">FileAPI Command Blocks</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-ghost btn-sm" onclick="loadBlocks()">Reload</button>
+          <div class="tag" style="background:rgba(255,60,90,.08);color:var(--red);border-color:rgba(255,60,90,.22)" id="blockedCount">0 blocked</div>
+        </div>
+      </div>
+      <div class="blocks-info">
+        Toggle ON (red) = <b>BLOCKED</b> &mdash; the fileapi command will be rejected by systemapi. Toggle OFF = ALLOWED.
+      </div>
+      <div class="blocks-grid" id="blocksGrid">
+        <div style="color:var(--muted);font-size:12px;padding:18px;grid-column:1/-1">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: SYSTEM COMMAND BLOCKS -->
+  <div class="tab-panel" id="tab-cmdblocks">
+    <div class="main-grid">
+      <div class="left-col">
+        <div class="card accent-red">
+          <div class="card-head">
+            <div class="card-title">System Command Blocks</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btn btn-ghost btn-sm" onclick="loadCommandBlocks()">Reload</button>
+              <div class="tag" style="background:rgba(255,60,90,.08);color:var(--red);border-color:rgba(255,60,90,.22)" id="cmdBlockCount">0 blocked</div>
+            </div>
+          </div>
+          <div class="blocks-info">
+            Each entry is an <b>OS command word</b> systemapi will reject &mdash; any
+            <code>os_command:</code> whose first token matches a blocked word is refused.
+            Add a word to block it; remove one to allow it again.
+          </div>
+          <div class="blocks-grid" id="cmdBlocksGrid">
+            <div style="color:var(--muted);font-size:12px;padding:18px;grid-column:1/-1">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <div class="card accent-green">
+          <div class="card-head"><div class="card-title">Add Command Block</div></div>
+          <div class="form-body">
+            <div>
+              <label class="f-label">Command to block</label>
+              <input class="f-input" id="addBlockInput" placeholder="e.g. shutdown" spellcheck="false"
+                onkeydown="if(event.key==='Enter')addCommandBlock()">
+            </div>
+            <button class="btn btn-green btn-full" onclick="addCommandBlock()">Block Command</button>
+            <div class="hint">Blocks the command word from running via os_command.</div>
+          </div>
+        </div>
+
+        <div class="card accent-red">
+          <div class="card-head"><div class="card-title">Remove Command Block</div></div>
+          <div class="form-body">
+            <div>
+              <label class="f-label">Command to unblock</label>
+              <input class="f-input" id="removeBlockInput" placeholder="e.g. shutdown" spellcheck="false"
+                onkeydown="if(event.key==='Enter')removeCommandBlockByText()">
+            </div>
+            <button class="btn btn-red btn-full" onclick="removeCommandBlockByText()">Remove Block</button>
+            <div class="hint">Cancels an existing block so the command is allowed again.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<!-- Edit Modal -->
+<div class="overlay" id="editOverlay">
+  <div class="modal">
+    <div class="modal-title">
+      <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>
+      Edit Service
+    </div>
+    <div class="modal-form">
+      <div><label class="f-label">Key (read-only)</label><input class="f-input" id="eKey" readonly></div>
+      <div><label class="f-label">IP Address</label><input class="f-input" id="eIp" placeholder="127.0.0.1" spellcheck="false"></div>
+      <div><label class="f-label">Port</label><input class="f-input" id="ePort" placeholder="8400" type="number"></div>
+      <div class="braces-row">
+        <div>
+          <div class="braces-label">Braces</div>
+          <div class="braces-hint">collect &#x7B;&#x7D; blocks</div>
+        </div>
+        <div class="braces-ctl">
+          <span id="eBracesLabel" class="braces-state">off</span>
+          <label class="toggle toggle-cyan">
+            <input type="checkbox" id="eBraces" onchange="_bracesLabel('eBracesLabel', this.checked)">
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModals()">Cancel</button>
+        <button class="btn btn-cyan"  onclick="saveEdit()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="overlay" id="delOverlay">
+  <div class="modal">
+    <div class="modal-title">
+      <span class="ic" style="color:var(--red)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></span>
+      Remove Service
+    </div>
+    <div class="confirm-msg">Remove service<br><span class="confirm-key" id="delKey"></span> ?</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModals()">Cancel</button>
+      <button class="btn btn-red"   onclick="confirmDelete()">Remove</button>
+    </div>
+  </div>
+</div>
+
+<!-- systemapi Login Modal -->
+<div class="overlay" id="sysLoginOverlay">
+  <div class="modal">
+    <div class="modal-title">
+      <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+      systemapi Login
+    </div>
+    <div class="modal-form">
+      <div class="hint">Enter the systemapi password to manage command blocks. It's saved locally so you won't be asked again.</div>
+      <div><label class="f-label">Password</label>
+        <input class="f-input" id="sysLoginPw" type="password" spellcheck="false" autocomplete="off"
+          onkeydown="if(event.key==='Enter')submitSysLogin()"></div>
+      <div id="sysLoginErr" style="font-size:11px;color:var(--red);min-height:14px"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModals()">Cancel</button>
+        <button class="btn btn-cyan"  onclick="submitSysLogin()">Connect</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="net_config.js"></script>
+<script>
+// ── Bridge connection (client-side, configurable + persisted) ─────
+// Default = the origin the page is served from (the bridge serves this UI),
+// falling back to 127.0.0.1:8843 for file:// opens. Overridable in Server
+// Config so the user can reconnect to a moved/restarted bridge.
+const BRIDGE_KEY = 'frtgg_bridge_config';
+
+function _bridgeDefault() {
+  if (location.origin.startsWith('http')) {
+    try { const u = new URL(location.origin); return { host: u.hostname, port: parseInt(u.port) || 8843 }; }
+    catch {}
+  }
+  return { host: '127.0.0.1', port: 8843 };
+}
+function getBridge() {
+  try {
+    const s = JSON.parse(localStorage.getItem(BRIDGE_KEY) || 'null');
+    if (s && s.host && s.port) return { host: s.host, port: parseInt(s.port) };
+  } catch {}
+  return _bridgeDefault();
+}
+function setBridge(host, port) {
+  localStorage.setItem(BRIDGE_KEY, JSON.stringify({ host, port: parseInt(port) }));
+  BRIDGE = `http://${host}:${parseInt(port)}`;
+}
+let BRIDGE = (() => { const b = getBridge(); return `http://${b.host}:${b.port}`; })();
+let services   = {};
+let blockes    = {};
+let pendingDel = null;
+let cmdCount = 0, upCount = 0, downCount = 0;
+
+// Bridge-side config (config.json) — systemapi + the LLM TCP target the
+// bridge uses for raw commands. Browser-side connection settings (LLM HTTP
+// + discovered Prompt API) live in localStorage via net_config.js.
+let config = {
+  llm_server:  { host: '127.0.0.1', port: 8111, http_port: 8112 },
+  systemapi:   { host: '127.0.0.1', port: 8300 },
+};
+
+const CMD_LABELS = {
+  readfile:'read', writefile:'write', delete:'del', addfile:'add',
+  listfile:'list', get_folders:'dirs', extFiles:'ext', size:'size',
+  editline:'edit', deleteline:'dline', startwithline:'swl',
+};
+
+// ── Inline SVG icons (no emoji — matches the operator design system) ──
+const SVG = {
+  test:   '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 8h3l1.6-4.4L9.4 12.8l1.6-4.8h3.5"/></svg>',
+  edit:   '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.4 2.4l3.2 3.2M2.4 13.6l1-3.2 7-7 2.2 2.2-7 7-3.2 1z"/></svg>',
+  lock:   '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3.3" y="7" width="9.4" height="6.7" rx="1.2"/><path d="M5.2 7V5.1a2.8 2.8 0 0 1 5.6 0V7"/></svg>',
+  unlock: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3.3" y="7" width="9.4" height="6.7" rx="1.2"/><path d="M5.2 7V5.1a2.8 2.8 0 0 1 5.4-1"/></svg>',
+  trash:  '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4h11M6 4V2.7h4V4M4 4l.7 9.3h6.6L12 4"/></svg>',
+};
+
+// ── Navigate to Prompt Manager (full page) ────────────────────────
+function goPromptMgr() {
+  window.location.href = 'prompt_manager.html';
+}
+
+// ── Tab switching ─────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'inject')  refreshInjectTarget();
+  if (name === 'config')  renderConfig();
+  if (name === 'fileapi') loadBlocks();
+  if (name === 'cmdblocks') loadCommandBlocks();
+}
+
+async function init() {
+  log('Connecting to bridge...', 'info');
+  // Ask the server we came from for ALL its service ports, point the bridge at
+  // the prompt-mgr port, and auto-apply llm-server / prompt-api / systemapi.
+  const settings = await autoConnectBridge();
+  await checkBridge();
+  await fetchRemote();
+  await fetchConfig();
+  if (settings) {
+    applyServerSettings(settings);   // /server-settings wins over the bridge's /api/config
+    renderConfig();
+    renderDiscovered(_serverSettingsToDiscovered(settings), netGetPromptApi());
+    log('Auto-connected llm-server / prompt-api / systemapi from /server-settings', 'ok');
+  }
+  refreshInjectTarget();
+  // Keep the header pill / down-banner accurate as the bridge comes and goes.
+  setInterval(checkBridge, 10000);
+  // Fallback: if the origin didn't supply settings, re-discover the Prompt API
+  // from a previously saved llm-server (the older /server_settings flow).
+  if (!settings) {
+    try {
+      const s = await netRefreshFromLlm();
+      if (s) {
+        renderDiscovered(s, netGetPromptApi());
+        log(`Prompt API auto-connected: ${netGetPromptApiLabel()}`, 'ok');
+      }
+    } catch {}
+  }
+}
+
+// Apply a full /server-settings payload to local connection state so the user
+// never has to re-enter llm-server / systemapi:
+//   {"chat-server":8900,"llm_server":{host,http_port,port},"prompt-mgr":8843,
+//    "promptapi":{host,http_port,port},"systemapi":{host,port}}
+function applyServerSettings(s) {
+  if (s.llm_server && s.llm_server.host) {
+    const httpPort = parseInt(s.llm_server.http_port) || parseInt(s.llm_server.port);
+    netSetLlm(s.llm_server.host, httpPort);   // UI's LLM Server field is the HTTP port
+  }
+  if (s.promptapi && s.promptapi.host) {
+    const paPort = parseInt(s.promptapi.http_port) || parseInt(s.promptapi.port);
+    netSetPromptApi(s.promptapi.host, paPort);
+  }
+  config = {
+    ...config,
+    llm_server: {
+      host:      s.llm_server?.host      ?? config.llm_server?.host,
+      port:      parseInt(s.llm_server?.port)      || config.llm_server?.port,        // TCP
+      http_port: parseInt(s.llm_server?.http_port) || config.llm_server?.http_port,
+    },
+    systemapi: {
+      host: s.systemapi?.host ?? config.systemapi?.host,
+      port: parseInt(s.systemapi?.port) || config.systemapi?.port,
+    },
+    promptapi: s.promptapi
+      ? { host: s.promptapi.host, port: parseInt(s.promptapi.http_port) || parseInt(s.promptapi.port) }
+      : config.promptapi,
+  };
+}
+
+// Adapt the new /server-settings shape to the Discovered-panel renderer.
+function _serverSettingsToDiscovered(s) {
+  return {
+    'llm-server_TCP':  s.llm_server?.port,
+    'llm-server_HTTP': s.llm_server?.http_port,
+    'prompt-api_TCP':  s.promptapi?.port,
+    'prompt-api_HTTP': s.promptapi?.http_port,
+  };
+}
+
+async function callBridge(path, body, method='POST') {
+  const r = await fetch(`${BRIDGE}${path}`, {
+    method, headers: {'Content-Type': 'application/json'},
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.message || r.statusText);
+  return d;
+}
+
+// ── Bridge auto-discovery ─────────────────────────────────────────
+// Mirror the llm-server flow: ask the server this page came from for its
+// real service ports and point the bridge at the prompt-mgr port.
+//   GET http://<origin>/server-settings  →  {"chat-server":8900,"prompt-mgr":8843}
+async function discoverPromptMgr(host, port) {
+  const ctl = new AbortController();
+  const t   = setTimeout(() => ctl.abort(), 4000);
+  try {
+    const r = await fetch(`http://${host}:${port}/server-settings`, { signal: ctl.signal });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const s  = await r.json();
+    const pm = parseInt(s['prompt-mgr']);
+    if (!pm) throw new Error('server-settings missing prompt-mgr');
+    return { port: pm, settings: s };
+  } finally { clearTimeout(t); }
+}
+
+// Run on load: discover the prompt-mgr port from the origin and connect to it.
+async function autoConnectBridge() {
+  let host, port;
+  if (location.origin.startsWith('http')) {
+    const u = new URL(location.origin);
+    host = u.hostname; port = parseInt(u.port) || 80;
+  } else {
+    const b = getBridge(); host = b.host; port = b.port;  // file:// — use saved/default
+  }
+  try {
+    const { port: pm, settings } = await discoverPromptMgr(host, port);
+    setBridge(host, pm);
+    log(`Bridge auto-connected: prompt-mgr at ${host}:${pm} (via ${host}:${port}/server-settings)`, 'ok');
+    return settings;
+  } catch (e) {
+    log(`Bridge discovery failed (${e.message}) — using ${BRIDGE}`, 'warn');
+  }
+}
+
+// ── Bridge reachability ───────────────────────────────────────────
+function _setBridgeStatus(ok) {
+  const pill   = document.getElementById('bridgePill');
+  const txt    = document.getElementById('bridgePillText');
+  const banner = document.getElementById('bridgeDownBanner');
+  const brand  = document.getElementById('brandBridge');
+  if (brand) brand.textContent = BRIDGE.replace(/^https?:\/\//, '');
+  if (ok) {
+    pill.className = 'pill pill-live';
+    txt.textContent = 'Bridge Running';
+    banner.classList.remove('show');
+  } else {
+    pill.className = 'pill pill-dead';
+    txt.textContent = 'Bridge Down';
+    document.getElementById('bridgeDownUrl').textContent = BRIDGE;
+    banner.classList.add('show');
+  }
+}
+
+async function checkBridge() {
+  try {
+    const ctl = new AbortController();
+    const t   = setTimeout(() => ctl.abort(), 4000);
+    const r   = await fetch(`${BRIDGE}/api/services`, { signal: ctl.signal });
+    clearTimeout(t);
+    _setBridgeStatus(r.ok);
+    return r.ok;
+  } catch {
+    _setBridgeStatus(false);
+    return false;
+  }
+}
+
+function gotoBridgeConfig() {
+  const btn = document.querySelector('.tab-btn[onclick*="config"]');
+  if (btn) switchTab('config', btn);
+  const host = document.getElementById('cfg-bridge-host');
+  if (host) host.focus();
+}
+
+async function reconnectBridge() {
+  const host = document.getElementById('cfg-bridge-host').value.trim();
+  const port = parseInt(document.getElementById('cfg-bridge-port').value);
+  if (!host || isNaN(port)) { toast('Bridge: fill IP and port', 'err'); return; }
+  const statusEl = document.getElementById('bridge-status');
+  statusEl.innerHTML = `connecting to ${esc(host)}:${esc(port)} …`;
+  log(`Reconnecting to bridge ${host}:${port} …`, 'info');
+  // Same flow as load: if this address answers /server-settings, point the
+  // bridge at the discovered prompt-mgr port; otherwise connect directly.
+  let tHost = host, tPort = port;
+  try {
+    const { port: pm } = await discoverPromptMgr(host, port);
+    tHost = host; tPort = pm;
+    log(`Discovered prompt-mgr at ${host}:${pm}`, 'ok');
+  } catch {}
+  setBridge(tHost, tPort);
+  const ok = await checkBridge();
+  if (ok) {
+    statusEl.innerHTML = `<span style="color:var(--green)">connected to ${esc(BRIDGE)}</span>`;
+    toast('Bridge reconnected', 'ok');
+    log('Bridge reconnected', 'ok');
+    await fetchRemote(); await fetchConfig(); refreshInjectTarget();
+  } else {
+    statusEl.innerHTML = `<span style="color:var(--red)">still unreachable at ${esc(BRIDGE)}</span>`;
+    toast('Bridge still unreachable', 'err');
+    log(`Bridge still unreachable at ${BRIDGE}`, 'err');
+  }
+}
+
+async function fetchRemote() {
+  try {
+    const r = await fetch(`${BRIDGE}/api/services`);
+    if (!r.ok) throw new Error(r.statusText);
+    services = await r.json();
+    _setBridgeStatus(true);
+    render(); updateJson();
+    log(`Loaded ${Object.keys(services).length} services`, 'ok');
+  } catch(e) {
+    _setBridgeStatus(false);
+    log(`Bridge unreachable (${e.message}) -- using defaults`, 'warn');
+    if (!Object.keys(services).length) {
+      services = {
+        "internetapi:": {ip:"127.0.0.1", port:8400, Block:false},
+        "audioapi:":    {ip:"127.0.0.1", port:8116, Block:false},
+        "tts:":         {ip:"127.0.0.1", port:8112, Block:false},
+      };
+      render(); updateJson();
+    }
+  }
+}
+
+function render() {
+  const keys = Object.keys(services);
+  document.getElementById('svcCount').textContent = `${keys.length} service${keys.length!==1?'s':''}`;
+  document.getElementById('sTotal').textContent   = keys.length;
+  const list = document.getElementById('svcList');
+  if (!keys.length) {
+    list.innerHTML = `<div class="empty"><div style="font-size:40px;opacity:.15;margin-bottom:10px;font-weight:700">[ ]</div>No services registered.</div>`;
+    return;
+  }
+  list.innerHTML = keys.map((k, i) => {
+    const svc       = services[k];
+    const isBlocked = svc.Block === true;
+    const isAvail   = svc.Available_access === true;
+    const rowClass  = isBlocked ? 'svc-row blocked-row' : 'svc-row';
+    let badgeHtml;
+    if (isAvail)        badgeHtml = `<span class="badge-avail">AVAIL ACCESS</span>`;
+    else if (isBlocked) badgeHtml = `<span class="badge-blocked">BLOCKED</span>`;
+    else                badgeHtml = `<span class="badge-allowed">ALLOWED</span>`;
+    const blockBtnClass = isBlocked ? 'ico-btn b is-blocked' : 'ico-btn b';
+    const blockBtnTitle = isBlocked ? 'Unblock' : 'Block';
+    const blockBtnTxt   = isBlocked ? SVG.unlock : SVG.lock;
+     const blockBtn = `<button class="${blockBtnClass}" onclick="toggleBlock('${eJs(k)}')" title="${blockBtnTitle}">${blockBtnTxt}</button>`;
+    return `
+      <div class="${rowClass}" style="animation-delay:${i*.04}s">
+        <div class="svc-key"><span class="svc-dot" id="dot_${eId(k)}"></span>${esc(k)}</div>
+        <div class="svc-ip">${esc(svc.ip)}</div>
+        <div class="svc-port">:${svc.port}</div>
+        <div class="block-badge">${badgeHtml}</div>
+        <div class="svc-actions">
+          <button class="ico-btn t" onclick="testOne('${eJs(k)}')" title="Test connection">${SVG.test}</button>
+          <button class="ico-btn e" onclick="openEdit('${eJs(k)}')" title="Edit">${SVG.edit}</button>
+          ${blockBtn}
+          <button class="ico-btn d" onclick="openDelete('${eJs(k)}')" title="Remove">${SVG.trash}</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function toggleBlock(key) {
+  const isBlocked = services[key]?.Block === true;
+  try {
+    const r = await callBridge('/api/service/block', {key, block: !isBlocked});
+    services[key].Block = r.Block;
+    render(); updateJson();
+    const action = r.Block ? 'blocked' : 'unblocked';
+    log(`"${key}" ${action}`, r.Block ? 'warn' : 'ok');
+    toast(`"${key}" ${action}`, r.Block ? 'warn' : 'ok');
+  } catch(e) { toast(`Block failed: ${e.message}`, 'err'); }
+}
+
+// ── Braces toggle label helper (off/on + color) ──────────────────
+function _bracesLabel(id, on) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = on ? 'on' : 'off';
+  el.style.color = on ? 'var(--cyan)' : 'var(--muted)';
+}
+
+async function addService() {
+  let key = document.getElementById('aKey').value.trim();
+  const ip = document.getElementById('aIp').value.trim();
+  const port = parseInt(document.getElementById('aPort').value);
+  const braces = document.getElementById('aBraces').checked;
+  if (!key || !ip || !port) { toast('Fill all fields', 'err'); return; }
+  if (!key.endsWith(':')) key += ':';
+  if (services[key]) { toast(`"${key}" already exists`, 'err'); return; }
+  try {
+    await callBridge('/api/service/add', {key, ip, port, braces});
+    services[key] = {ip, port, Block: false, Braces: braces};
+    render(); updateJson(); cmdCount++; updateStats();
+    log(`Added "${key}" -> ${ip}:${port}${braces ? ' [Braces]' : ''}`, 'ok');
+    toast(`"${key}" added`, 'ok');
+    ['aKey','aIp','aPort'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('aBraces').checked = false;
+    _bracesLabel('aBracesLabel', false);
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function openEdit(key) {
+  document.getElementById('eKey').value  = key;
+  document.getElementById('eIp').value   = services[key].ip;
+  document.getElementById('ePort').value = services[key].port;
+  const braces = services[key].Braces === true;
+  document.getElementById('eBraces').checked = braces;
+  _bracesLabel('eBracesLabel', braces);
+  document.getElementById('editOverlay').classList.add('open');
+}
+async function saveEdit() {
+  const key  = document.getElementById('eKey').value;
+  const ip   = document.getElementById('eIp').value.trim();
+  const port = parseInt(document.getElementById('ePort').value);
+  const braces = document.getElementById('eBraces').checked;
+  if (!ip || !port) { toast('IP and Port required', 'err'); return; }
+  try {
+    await callBridge('/api/service/edit', {key, ip, port, braces});
+    services[key].ip = ip; services[key].port = port; services[key].Braces = braces;
+    render(); updateJson(); cmdCount++; updateStats();
+    log(`Updated "${key}" -> ${ip}:${port}${braces ? ' [Braces]' : ''}`, 'ok');
+    toast(`"${key}" updated`, 'ok');
+    closeModals();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function openDelete(key) { pendingDel = key; document.getElementById('delKey').textContent = key; document.getElementById('delOverlay').classList.add('open'); }
+async function confirmDelete() {
+  if (!pendingDel) return;
+  try {
+    await callBridge('/api/service/remove', {key: pendingDel});
+    delete services[pendingDel];
+    log(`Removed "${pendingDel}"`, 'warn');
+    toast(`"${pendingDel}" removed`, 'warn');
+    pendingDel = null; render(); updateJson(); cmdCount++; updateStats(); closeModals();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function testOne(key) {
+  const dot = document.getElementById(`dot_${eId(key)}`);
+  if (dot) dot.className = 'svc-dot spin';
+  log(`Testing "${key}" (${services[key].ip}:${services[key].port})...`, 'info');
+  try {
+    const r = await callBridge('/api/service/test', {key});
+    if (r.reachable) { if (dot) dot.className = 'svc-dot up'; upCount++; log(`OK "${key}" is reachable`, 'ok'); }
+    else             { if (dot) dot.className = 'svc-dot down'; downCount++; log(`FAIL "${key}" - ${r.message}`, 'err'); }
+    updateStats();
+  } catch(e) {
+    if (dot) dot.className = 'svc-dot down'; downCount++; updateStats();
+    log(`Test error: ${e.message}`, 'err');
+  }
+}
+async function testAll() { upCount = 0; downCount = 0; for (const k of Object.keys(services)) await testOne(k); }
+
+async function sendCmd() {
+  const el = document.getElementById('cmdInput');
+  const cmd = el.value.trim(); if (!cmd) return;
+  el.value = ''; log(`> ${cmd}`, 'cmd');
+  try {
+    const r = await callBridge('/api/send', {command: cmd});
+    log(`<- ${r.message || 'ok'}`, r.status === 'ok' ? 'ok' : 'err');
+    cmdCount++; updateStats();
+  } catch(e) { log(`Error: ${e.message}`, 'err'); }
+}
+
+function updateJson() { document.getElementById('jsonBox').value = JSON.stringify(services, null, 2); }
+function loadJson() {
+  try {
+    const p = JSON.parse(document.getElementById('jsonBox').value.trim());
+    for (const [k,v] of Object.entries(p)) if (!v.ip || !v.port) throw new Error(`"${k}" missing ip/port`);
+    services = p; render(); log(`Parsed ${Object.keys(services).length} services`, 'ok'); toast('JSON parsed', 'ok');
+  } catch(e) { toast(`JSON error: ${e.message}`, 'err'); }
+}
+async function syncJson() {
+  try {
+    const r = await fetch(`${BRIDGE}/api/services`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(services)});
+    const d = await r.json();
+    log(`Synced ${d.count} services`, 'ok'); toast('Saved', 'ok'); cmdCount++; updateStats();
+  } catch(e) { toast(`Sync failed: ${e.message}`, 'err'); }
+}
+function downloadJson() {
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([JSON.stringify(services,null,2)], {type:'application/json'})),
+    download: 'services.json'
+  }); a.click(); log('Downloaded services.json', 'ok');
+}
+
+// Inject
+function refreshInjectTarget() {
+  const h = config.llm_server.host === '0.0.0.0' ? '127.0.0.1' : config.llm_server.host;
+  document.getElementById('injectTarget').textContent = `${h}:${config.llm_server.port}`;
+}
+async function sendToLLM(command) { return await callBridge('/api/llm/raw', {command}); }
+async function doInject() {
+  const content = document.getElementById('injectEditor').value.trim();
+  if (!content) { toast('Nothing to inject', 'warn'); return; }
+  try { await sendToLLM(`json_prompt:${content}`); log(`Injected ${content.length} chars`, 'ok'); toast('Injected', 'ok'); }
+  catch(e) { log(`Inject failed: ${e.message}`, 'err'); toast(e.message, 'err'); }
+}
+async function reloadPrompt() {
+  try { await sendToLLM('__reload_prompt__'); log('Reload signal sent', 'ok'); toast('Prompt reloaded', 'ok'); }
+  catch(e) { log(`Reload failed: ${e.message}`, 'err'); toast(e.message, 'err'); }
+}
+async function clearInject() {
+  try { await sendToLLM('__clear_inject__'); log('Injected context cleared', 'warn'); toast('Cleared', 'warn'); }
+  catch(e) { log(`Clear failed: ${e.message}`, 'err'); toast(e.message, 'err'); }
+}
+function clearInjectEditor() { document.getElementById('injectEditor').value = ''; }
+
+// Config
+async function fetchConfig() {
+  try {
+    const r = await callBridge('/api/config', null, 'GET');
+    config = r;
+    renderConfig();
+  } catch(e) { renderConfig(); }
+}
+
+function renderConfig() {
+  // Bridge connection (client-side, where this UI fetches from).
+  const b = getBridge();
+  document.getElementById('cfg-bridge-host').value = b.host;
+  document.getElementById('cfg-bridge-port').value = b.port;
+  // LLM connection comes from localStorage (net_config.js), not the bridge.
+  const llm = netGetLlm();
+  document.getElementById('cfg-llm-host').value = llm.host;
+  document.getElementById('cfg-llm-port').value = llm.port;
+  document.getElementById('cfg-sys-host').value = config.systemapi?.host || '';
+  document.getElementById('cfg-sys-port').value = config.systemapi?.port || '';
+}
+
+function renderDiscovered(settings, promptapi) {
+  const el = document.getElementById('discovered-panel');
+  if (!settings && !promptapi) {
+    el.innerHTML = '<span style="color:var(--red)">Unreachable &mdash; check the LLM Server IP/port.</span>';
+    return;
+  }
+  const rows = [];
+  rows.push(`<span style="color:var(--green)">Connected</span>`);
+  if (promptapi) rows.push(`Prompt API &rarr; <span style="color:var(--purple);font-weight:700">${esc(promptapi.host)}:${promptapi.port}</span> (auto-connected)`);
+  if (settings) {
+    rows.push(`llm-server &nbsp;TCP <span style="color:var(--amber)">:${settings['llm-server_TCP']}</span> &middot; HTTP <span style="color:var(--amber)">:${settings['llm-server_HTTP']}</span>`);
+    rows.push(`prompt-api TCP <span style="color:var(--amber)">:${settings['prompt-api_TCP']}</span> &middot; HTTP <span style="color:var(--amber)">:${settings['prompt-api_HTTP']}</span>`);
+  }
+  el.innerHTML = rows.join('<br>');
+}
+
+function loadConfig() {
+  fetchConfig();
+  netRefreshFromLlm().then(settings => {
+    if (settings) renderDiscovered(settings, netGetPromptApi());
+  }).catch(() => {});
+  toast('Config reloaded', 'info');
+}
+
+async function saveConfig() {
+  const llmHost = document.getElementById('cfg-llm-host').value.trim();
+  const llmPort = parseInt(document.getElementById('cfg-llm-port').value);
+  const sysHost = document.getElementById('cfg-sys-host').value.trim();
+  const sysPort = parseInt(document.getElementById('cfg-sys-port').value);
+  if (!llmHost || isNaN(llmPort)) { toast('LLM Server: fill IP and port', 'err'); return; }
+  if (!sysHost || isNaN(sysPort)) { toast('SystemAPI: fill IP and port', 'err'); return; }
+
+  // 1 — connect to the llm-server, GET /server_settings, auto-connect Prompt API
+  log(`Connecting to llm-server ${llmHost}:${llmPort} ...`, 'info');
+  let resolved;
+  try {
+    resolved = await netResolveAndSave(llmHost, llmPort);
+  } catch(e) {
+    renderDiscovered(null, null);
+    log(`Server discovery failed: ${e.message}`, 'err');
+    toast(e.message, 'err');
+    return;
+  }
+  renderDiscovered(resolved.settings, resolved.promptapi);
+  renderConfig();   // reflect corrected llm host/port (direct-mode entry)
+  log(`Prompt API auto-connected: ${resolved.promptapi.host}:${resolved.promptapi.port} (${resolved.mode})`, 'ok');
+
+  // 2 — keep the bridge's config.json in sync (it needs the LLM *TCP* port
+  //     for raw commands; http_port lets it run its own discovery).
+  const llm = netGetLlm();
+  const newCfg = {
+    llm_server: {
+      host: llm.host,
+      port: (resolved.settings && parseInt(resolved.settings['llm-server_TCP'])) || config.llm_server?.port || 8111,
+      http_port: llm.port,
+    },
+    systemapi: { host: sysHost, port: sysPort },
+    promptapi: { host: resolved.promptapi.host, port: resolved.promptapi.port },
+  };
+  try {
+    await callBridge('/api/config', newCfg);
+    config = { ...config, ...newCfg };
+    refreshInjectTarget();
+    log('config.json saved', 'ok');
+    toast('Connected — Prompt API discovered & saved', 'ok');
+  } catch(e) {
+    log(`Bridge config save failed: ${e.message}`, 'warn');
+    toast(`Connected, but bridge save failed: ${e.message}`, 'warn');
+  }
+}
+
+// FileAPI Blocks
+async function loadBlocks() {
+  try {
+    blockes = await callBridge('/api/fileapi/blocks', null, 'GET');
+    renderBlocks();
+    log(`Loaded ${Object.keys(blockes).length} fileapi commands`, 'ok');
+  } catch(e) {
+    document.getElementById('blocksGrid').innerHTML =
+      `<div style="color:var(--red);font-size:12px;padding:18px;grid-column:1/-1">Error: ${esc(e.message)}</div>`;
+  }
+}
+function renderBlocks() {
+  const grid = document.getElementById('blocksGrid');
+  const cmds = Object.keys(blockes);
+  if (!cmds.length) { grid.innerHTML = '<div style="color:var(--txt2);font-size:12px;padding:18px;grid-column:1/-1">No commands found.</div>'; return; }
+  const blockedCount = cmds.filter(c => blockes[c].block).length;
+  document.getElementById('blockedCount').textContent = `${blockedCount} blocked`;
+  grid.innerHTML = cmds.map(cmd => {
+    const isBlocked  = blockes[cmd].block === true;
+    const sigil      = CMD_LABELS[cmd] || cmd.slice(0,4);
+    const cardClass  = isBlocked ? 'block-card is-blocked' : 'block-card is-allowed';
+    const badgeClass = isBlocked ? 'block-status-badge blocked' : 'block-status-badge allowed';
+    return `
+      <div class="${cardClass}" id="card_${cmd}">
+        <div class="block-cmd-name">
+          <span class="cmd-sigil">${sigil}</span>
+          <span>fileapi:${esc(cmd)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="${badgeClass}" id="badge_${cmd}">${isBlocked ? 'BLOCKED' : 'ALLOWED'}</span>
+          <label class="toggle" title="${isBlocked ? 'Click to unblock' : 'Click to block'}">
+            <input type="checkbox" id="toggle_${cmd}" ${isBlocked ? 'checked' : ''}
+              onchange="toggleBlock_fileapi('${cmd}', this.checked)">
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+      </div>`;
+  }).join('');
+}
+async function toggleBlock_fileapi(cmd, newBlocked) {
+  try {
+    const r = await callBridge('/api/fileapi/blocks', {cmd, block: newBlocked});
+    blockes[cmd].block = r.block;
+    const card  = document.getElementById(`card_${cmd}`);
+    const badge = document.getElementById(`badge_${cmd}`);
+    if (card)  card.className  = newBlocked ? 'block-card is-blocked' : 'block-card is-allowed';
+    if (badge) { badge.className = newBlocked ? 'block-status-badge blocked' : 'block-status-badge allowed'; badge.textContent = newBlocked ? 'BLOCKED' : 'ALLOWED'; }
+    document.getElementById('blockedCount').textContent = `${Object.values(blockes).filter(v=>v.block).length} blocked`;
+    log(`fileapi:${cmd} ${newBlocked ? 'blocked' : 'unblocked'}`, newBlocked ? 'warn' : 'ok');
+    toast(`fileapi:${cmd} ${newBlocked ? 'blocked' : 'unblocked'}`, newBlocked ? 'warn' : 'ok');
+  } catch(e) {
+    const chk = document.getElementById(`toggle_${cmd}`);
+    if (chk) chk.checked = !newBlocked;
+    toast(`Failed: ${e.message}`, 'err');
+  }
+}
+
+// System Command Blocks (proxied to systemapi: blocks_command.json)
+let cmdBlocks = [];
+const SYS_PW_KEY = 'frtgg_systemapi_pw';
+
+// fetch wrapper that returns {ok,status,data} and never throws on non-2xx, so
+// callers can branch on 401 (systemapi auth). Tolerates a non-JSON body (e.g. an
+// HTML 404 from a stale/old server) by defaulting data to {}.
+async function sysFetch(path, body, method='POST') {
+  const r = await fetch(`${BRIDGE}${path}`, {
+    method, headers: {'Content-Type': 'application/json'},
+    body: body ? JSON.stringify(body) : undefined
+  });
+  let data = {};
+  try { data = await r.json(); } catch {}
+  return { ok: r.ok, status: r.status, data };
+}
+
+async function systemapiLogin(pw) {
+  const r = await sysFetch('/api/systemapi/login', {password: pw});
+  if (r.ok) { localStorage.setItem(SYS_PW_KEY, pw); return true; }
+  throw new Error(r.data.message || `login failed (${r.status})`);
+}
+
+function openSysLogin() {
+  document.getElementById('sysLoginErr').textContent = '';
+  document.getElementById('sysLoginOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('sysLoginPw').focus(), 50);
+}
+
+async function submitSysLogin() {
+  const pw = document.getElementById('sysLoginPw').value;
+  if (!pw) { document.getElementById('sysLoginErr').textContent = 'enter a password'; return; }
+  try {
+    await systemapiLogin(pw);
+    document.getElementById('sysLoginPw').value = '';
+    closeModals();
+    toast('systemapi connected', 'ok'); log('systemapi connected', 'ok');
+    loadCommandBlocks();
+  } catch(e) { document.getElementById('sysLoginErr').textContent = e.message; }
+}
+
+// Call a systemapi block endpoint, auto-logging-in with the stored password on a
+// 401 and retrying once; if still unauthorized, open the login modal.
+async function sysBlocksCall(path, body, method='POST') {
+  let r = await sysFetch(path, body, method);
+  if (r.status === 401) {
+    const pw = localStorage.getItem(SYS_PW_KEY);
+    if (pw) { try { await systemapiLogin(pw); r = await sysFetch(path, body, method); } catch {} }
+  }
+  if (r.status === 401) { openSysLogin(); throw new Error('login required'); }
+  if (!r.ok) throw new Error(r.data.message || `HTTP ${r.status}`);
+  return r.data;
+}
+
+async function loadCommandBlocks() {
+  try {
+    const r = await sysBlocksCall('/api/systemapi/blocks', null, 'GET');
+    cmdBlocks = Array.isArray(r.blocks) ? r.blocks : [];
+    renderCommandBlocks();
+    log(`Loaded ${cmdBlocks.length} command block${cmdBlocks.length!==1?'s':''}`, 'ok');
+  } catch(e) {
+    document.getElementById('cmdBlocksGrid').innerHTML =
+      `<div style="color:var(--red);font-size:12px;padding:18px;grid-column:1/-1">Error: ${esc(e.message)}</div>`;
+  }
+}
+function renderCommandBlocks() {
+  document.getElementById('cmdBlockCount').textContent = `${cmdBlocks.length} blocked`;
+  const grid = document.getElementById('cmdBlocksGrid');
+  if (!cmdBlocks.length) {
+    grid.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:18px;grid-column:1/-1">No command blocks.</div>';
+    return;
+  }
+  grid.innerHTML = cmdBlocks.map((cmd, i) => `
+    <div class="block-card is-blocked">
+      <div class="block-cmd-name">
+        <span class="cmd-sigil">${i}</span>
+        <span>${esc(cmd)}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="block-status-badge blocked">BLOCKED</span>
+        <button class="ico-btn d" onclick="removeCommandBlock(${i})" title="Unblock">${SVG.trash}</button>
+      </div>
+    </div>`).join('');
+}
+async function addCommandBlock() {
+  const el = document.getElementById('addBlockInput');
+  const cmd = el.value.trim();
+  if (!cmd) { toast('Enter a command to block', 'warn'); return; }
+  try {
+    const r = await sysBlocksCall('/api/systemapi/blocks/add', {command: cmd});
+    cmdBlocks = Array.isArray(r.blocks) ? r.blocks : cmdBlocks;
+    el.value = ''; renderCommandBlocks(); cmdCount++; updateStats();
+    log(`Blocked command "${cmd}"`, 'warn');
+    toast(`"${cmd}" blocked`, 'warn');
+  } catch(e) { toast(`Block failed: ${e.message}`, 'err'); log(`Block failed: ${e.message}`, 'err'); }
+}
+async function removeCommandBlockByText() {
+  const el = document.getElementById('removeBlockInput');
+  const cmd = el.value.trim();
+  if (!cmd) { toast('Enter a command to unblock', 'warn'); return; }
+  try {
+    const r = await sysBlocksCall('/api/systemapi/blocks/remove', {command: cmd});
+    cmdBlocks = Array.isArray(r.blocks) ? r.blocks : cmdBlocks;
+    el.value = ''; renderCommandBlocks(); cmdCount++; updateStats();
+    log(`Unblocked command "${cmd}"`, 'ok');
+    toast(`"${cmd}" unblocked`, 'ok');
+  } catch(e) { toast(`Remove failed: ${e.message}`, 'err'); log(`Remove failed: ${e.message}`, 'err'); }
+}
+async function removeCommandBlock(index) {
+  const name = cmdBlocks[index];
+  try {
+    const r = await sysBlocksCall('/api/systemapi/blocks/remove', {index});
+    cmdBlocks = Array.isArray(r.blocks) ? r.blocks : cmdBlocks;
+    renderCommandBlocks(); cmdCount++; updateStats();
+    log(`Unblocked command "${name}"`, 'ok');
+    toast(`"${name}" unblocked`, 'ok');
+  } catch(e) { toast(`Remove failed: ${e.message}`, 'err'); log(`Remove failed: ${e.message}`, 'err'); }
+}
+
+function updateStats() {
+  document.getElementById('sUp').textContent    = upCount;
+  document.getElementById('sDown').textContent  = downCount;
+  document.getElementById('sCmds').textContent  = cmdCount;
+  document.getElementById('sTotal').textContent = Object.keys(services).length;
+}
+function closeModals() { document.querySelectorAll('.overlay').forEach(o => o.classList.remove('open')); }
+document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target===o) closeModals(); }));
+
+function log(msg, type='info') {
+  const box = document.getElementById('con');
+  const now = new Date();
+  const ts  = [now.getHours(),now.getMinutes(),now.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
+  const el  = document.createElement('div');
+  el.className = 'log';
+  el.innerHTML = `<span class="log-ts">${ts}</span><span class="log-msg ${type}">${esc(msg)}</span>`;
+  box.appendChild(el); box.scrollTop = box.scrollHeight;
+  while (box.children.length > 300) box.removeChild(box.firstChild);
+}
+function clearLog() { document.getElementById('con').innerHTML = ''; log('Log cleared', 'info'); }
+
+function toast(msg, type='info') {
+  const icons = {ok:'+', err:'x', warn:'!', info:'i'};
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span class="ti">${icons[type]||'i'}</span><span>${esc(msg)}</span>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => { el.style.cssText='opacity:0;transition:opacity .3s'; setTimeout(()=>el.remove(),300); }, 3500);
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function eId(s) { return s.replace(/[^a-z0-9]/gi,'_'); }
+function eJs(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+init();
+</script>
+</body>
+</html>

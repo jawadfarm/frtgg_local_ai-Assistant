@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:         #070a0f;
+  --s1:         #0d1219;
+  --s2:         #111820;
+  --s3:         #161e2c;
+  --border:     #1f2f42;
+  --border2:    #2a3f58;
+  --b-purple:   #3d1f6e;
+  --b-cyan:     #1a4a6b;
+  --b-amber:    #4a3a10;
+  --b-red:      #4a1f1f;
+  --cyan:       #29ecff;
+  --cyan2:      #00ccee;
+  --cyan-dim:   rgba(41,236,255,.09);
+  --green:      #4dffaa;
+  --green-dim:  rgba(77,255,170,.09);
+  --red:        #ff4d6a;
+  --red-dim:    rgba(255,77,106,.09);
+  --amber:      #ffc200;
+  --amber-dim:  rgba(255,194,0,.09);
+  --purple:     #a78bfa;
+  --purple-dim: rgba(167,139,250,.09);
+  --txt:        #b8d0e8;
+  --txt2:       #5a7590;
+  --txtbr:      #e8f6ff;
+  --mono:       'JetBrains Mono', monospace;
+  --display:    'Syne', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--display); background: var(--bg); color: var(--txt); min-height: 100vh; overflow-x: hidden; }
+
+/* ── Background ── */
+.bg-canvas {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 700px 500px at 90% -5%,  rgba(109,40,217,.12) 0%, transparent 60%),
+    radial-gradient(ellipse 500px 400px at -5% 90%,  rgba(60,0,120,.08) 0%, transparent 60%);
+}
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(167,139,250,.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(167,139,250,.02) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+/* ══════════════════════════════════════════════
+   LOGIN OVERLAY  (same style as chat.html)
+══════════════════════════════════════════════ */
+#login-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column;
+  transition: opacity .4s ease;
+}
+#login-overlay.hidden { opacity: 0; pointer-events: none; }
+
+.login-scanlines {
+  position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 3px,
+    rgba(167,139,250,.012) 3px, rgba(167,139,250,.012) 4px
+  );
+}
+.login-box {
+  position: relative; z-index: 1;
+  width: 380px;
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  background: var(--s1);
+  padding: 36px 32px 28px;
+  box-shadow: 0 0 60px rgba(167,139,250,.08), 0 0 0 1px rgba(167,139,250,.04);
+  animation: loginBoxIn .5s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes loginBoxIn {
+  from { opacity:0; transform: translateY(16px) scale(.97); }
+  to   { opacity:1; transform: translateY(0) scale(1); }
+}
+.login-accent {
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(90deg, #5b21b6, var(--purple), #5b21b6);
+  background-size: 200% 100%;
+  animation: loginShimmer 2.5s linear infinite;
+}
+@keyframes loginShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+.login-logo { text-align: center; margin-bottom: 30px; }
+.login-logo-icon {
+  width: 60px; height: 60px; border-radius: 15px;
+  background: linear-gradient(135deg, #5b21b6, var(--purple));
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 14px;
+  box-shadow: 0 0 32px rgba(167,139,250,.3), inset 0 1px 0 rgba(255,255,255,.1);
+  font-family: var(--mono); font-size: 24px;
+}
+.login-logo-name {
+  font-family: var(--display); font-size: 22px; font-weight: 800;
+  color: var(--txtbr); letter-spacing: -.3px;
+}
+.login-logo-sub {
+  font-family: var(--mono); font-size: 11px; color: var(--txt2);
+  letter-spacing: 2px; text-transform: uppercase; margin-top: 4px;
+}
+
+.login-label {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--txt2); margin-bottom: 6px; display: block;
+}
+.login-input-wrap { position: relative; margin-bottom: 16px; }
+.login-input {
+  width: 100%;
+  background: var(--bg); border: 1px solid var(--border2); border-radius: 8px;
+  padding: 11px 42px 11px 14px; color: var(--txtbr);
+  font-family: var(--mono); font-size: 14px; outline: none;
+  transition: border-color .15s, box-shadow .15s; letter-spacing: 2px;
+}
+.login-input:focus {
+  border-color: rgba(167,139,250,.5);
+  box-shadow: 0 0 0 3px rgba(167,139,250,.1);
+}
+.login-input::placeholder { color: var(--txt2); letter-spacing: 1px; }
+.login-eye {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--txt2); cursor: pointer;
+  font-size: 14px; padding: 2px 4px; transition: color .15s; font-family: var(--mono);
+}
+.login-eye:hover { color: var(--txtbr); }
+
+.login-btn {
+  width: 100%; padding: 12px;
+  background: rgba(167,139,250,.1);
+  border: 1px solid rgba(167,139,250,.3);
+  border-radius: 8px; color: var(--purple);
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer; transition: background .15s, box-shadow .15s; margin-top: 4px;
+}
+.login-btn:hover { background: rgba(167,139,250,.18); box-shadow: 0 0 24px rgba(167,139,250,.18); }
+.login-btn:active { transform: scale(.99); }
+.login-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.login-error {
+  margin-top: 12px; padding: 9px 12px; border-radius: 8px;
+  background: var(--red-dim); border: 1px solid rgba(255,77,106,.25);
+  color: var(--red); font-family: var(--mono); font-size: 11px; letter-spacing: .5px;
+  display: none; align-items: center; gap: 8px;
+}
+.login-error.visible { display: flex; animation: errIn .2s ease both; }
+@keyframes errIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+
+.login-dots { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 16px; }
+.login-dots.hidden { display: none; }
+.login-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--border2); animation: dotPulse 1.4s ease-in-out infinite;
+}
+.login-dot:nth-child(2) { animation-delay: .2s; }
+.login-dot:nth-child(3) { animation-delay: .4s; }
+@keyframes dotPulse { 0%,100%{opacity:.2;transform:scale(.8)} 50%{opacity:.8;transform:scale(1.1)} }
+
+.login-footer { margin-top: 20px; text-align: center; font-family: var(--mono); font-size: 10px; color: var(--txt2); letter-spacing: 1px; }
+
+/* ══════════════════════════════════════════════
+   MAIN APP
+══════════════════════════════════════════════ */
+#app { position: relative; z-index: 1; display: none; flex-direction: column; min-height: 100vh; }
+#app.visible { display: flex; }
+
+/* Header */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 28px;
+  background: var(--s1); border-bottom: 1px solid var(--border2);
+  animation: slideDown .4s ease both; flex-shrink: 0;
+}
+.header-left  { display: flex; align-items: center; gap: 16px; }
+.header-icon {
+  width: 42px; height: 42px; border-radius: 11px;
+  background: linear-gradient(135deg, #5b21b6, var(--purple));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; box-shadow: 0 0 20px rgba(167,139,250,.25);
+}
+.header-title { font-size: 20px; font-weight: 800; color: var(--txtbr); }
+.header-sub   { font-family: var(--mono); font-size: 11px; color: var(--txt2); margin-top: 2px; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.conn-badge {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 12px; padding: 6px 14px;
+  border-radius: 8px; border: 1px solid;
+}
+.conn-badge.ok  { background: var(--green-dim); border-color: rgba(77,255,170,.2); color: var(--green); }
+.conn-badge.err { background: var(--red-dim);   border-color: rgba(255,77,106,.2); color: var(--red); }
+.conn-badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+.conn-badge.ok  .dot { background: var(--green); box-shadow: 0 0 6px var(--green); animation: blink 2s infinite; }
+.conn-badge.err .dot { background: var(--red); }
+
+.logout-btn {
+  padding: 6px 14px; border-radius: 8px;
+  background: var(--red-dim); border: 1px solid rgba(255,77,106,.2);
+  color: rgba(255,77,106,.6); font-family: var(--mono); font-size: 11px;
+  letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+  transition: all .15s;
+}
+.logout-btn:hover { background: rgba(255,77,106,.15); color: var(--red); border-color: rgba(255,77,106,.4); }
+
+/* Main layout */
+.main { display: grid; grid-template-columns: 260px 1fr; gap: 20px; padding: 20px 28px; flex: 1; animation: fadeUp .4s .1s ease both; }
+
+/* Section list */
+.section-panel {
+  background: var(--s1); border: 1px solid var(--b-purple);
+  border-radius: 14px; display: flex; flex-direction: column; overflow: hidden;
+  height: calc(100vh - 130px);
+}
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; background: var(--s2); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-title { font-size: 13px; font-weight: 700; color: var(--txtbr); display: flex; align-items: center; gap: 8px; }
+.panel-count {
+  font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 5px;
+  background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(167,139,250,.2);
+}
+
+.section-list { flex: 1; overflow-y: auto; }
+.section-list::-webkit-scrollbar { width: 2px; }
+.section-list::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.section-item {
+  padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 12px; color: var(--txt);
+  transition: all .14s; display: flex; flex-direction: column; gap: 2px;
+}
+.section-item:hover { background: var(--purple-dim); color: var(--txtbr); }
+.section-item.active { background: rgba(109,40,217,.18); border-left: 3px solid var(--purple); color: var(--purple); }
+.section-key   { font-weight: 600; font-size: 13px; }
+.section-title { font-size: 11px; color: var(--txt2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.section-item.active .section-title { color: rgba(167,139,250,.6); }
+
+.panel-footer { padding: 12px; background: var(--s2); border-top: 1px solid var(--border); flex-shrink: 0; }
+
+/* Editor */
+.editor-panel {
+  background: var(--s1); border: 1px solid var(--b-purple);
+  border-radius: 14px; display: flex; flex-direction: column; overflow: hidden;
+  height: calc(100vh - 130px);
+}
+.editor-body { flex: 1; overflow-y: auto; padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+.editor-body::-webkit-scrollbar { width: 2px; }
+.editor-body::-webkit-scrollbar-thumb { background: var(--border2); }
+
+.unsaved-badge {
+  font-family: var(--mono); font-size: 11px; padding: 3px 10px; border-radius: 5px;
+  background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(255,194,0,.2); display: none;
+}
+.unsaved-badge.show { display: block; }
+
+/* Form elements */
+.f-label { font-family: var(--mono); font-size: 10px; color: var(--txt2); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 5px; display: block; font-weight: 600; }
+.f-input {
+  width: 100%; background: var(--s3); border: 1px solid var(--border);
+  border-radius: 9px; padding: 10px 13px; color: var(--txtbr);
+  font-family: var(--mono); font-size: 13px; outline: none; transition: all .15s;
+}
+.f-input:focus { border-color: rgba(167,139,250,.5); box-shadow: 0 0 0 3px rgba(167,139,250,.07); }
+.f-input::placeholder { color: var(--txt2); }
+textarea.f-input { resize: vertical; line-height: 1.6; }
+
+/* Buttons */
+.btn {
+  padding: 9px 16px; border-radius: 9px; border: none; cursor: pointer;
+  font-size: 13px; font-weight: 700; font-family: var(--display);
+  display: flex; align-items: center; justify-content: center; gap: 7px; transition: all .15s;
+}
+.btn-purple  { background: linear-gradient(135deg,#5b21b6,var(--purple)); color: #fff; box-shadow: 0 4px 18px rgba(167,139,250,.2); }
+.btn-purple:hover  { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(167,139,250,.35); }
+.btn-primary { background: linear-gradient(135deg,#1b4fd8,#29ecff); color: #000; box-shadow: 0 4px 18px rgba(41,236,255,.18); }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(41,236,255,.35); }
+.btn-ghost   { background: var(--s3); color: var(--txt); border: 1px solid var(--border); }
+.btn-ghost:hover   { border-color: rgba(167,139,250,.4); color: var(--purple); }
+.btn-danger  { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,77,106,.2); }
+.btn-danger:hover  { background: rgba(255,77,106,.16); }
+.btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 7px; }
+
+.editor-footer {
+  padding: 12px 16px; background: var(--s2); border-top: 1px solid var(--border);
+  display: flex; gap: 8px; flex-shrink: 0;
+}
+.editor-footer .btn { flex: 1; }
+
+/* Section enable/disable toggle */
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 13px; background: var(--s3); border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.tr-label { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+.toggle { position: relative; width: 44px; height: 24px; cursor: pointer; display: inline-block; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-track { position: absolute; inset: 0; border-radius: 12px; background: var(--border2); transition: background .2s; border: 1px solid var(--border); }
+.toggle input:checked ~ .toggle-track { background: rgba(77,255,170,.25); border-color: rgba(77,255,170,.4); }
+.toggle-thumb { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--txt2); transition: all .2s; }
+.toggle input:checked ~ .toggle-thumb { left: 23px; background: var(--green); box-shadow: 0 0 8px var(--green); }
+.sec-badge {
+  font-family: var(--mono); font-size: 9px; padding: 1px 7px; border-radius: 4px;
+  font-weight: 700; letter-spacing: .5px; margin-left: 6px; cursor: pointer;
+  border: 1px solid; transition: all .15s; user-select: none;
+}
+.sec-badge.off { background: var(--red-dim);   color: var(--red);   border-color: rgba(255,77,106,.3); }
+.sec-badge.on  { background: var(--green-dim); color: var(--green); border-color: rgba(77,255,170,.25); }
+.sec-badge.off:hover { background: rgba(255,77,106,.2); border-color: rgba(255,77,106,.5); }
+.sec-badge.on:hover  { background: rgba(77,255,170,.2); border-color: rgba(77,255,170,.45); }
+
+/* Empty state */
+.empty-state {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 14px; color: var(--txt2);
+  font-family: var(--mono); font-size: 13px; text-align: center; padding: 40px;
+}
+.empty-icon { font-size: 48px; opacity: .15; }
+
+/* Toast */
+.toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--s2); border: 1px solid var(--border2); border-radius: 10px;
+  padding: 11px 18px; font-family: var(--mono); font-size: 13px;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.4); animation: fadeUp .2s ease both; max-width: 320px;
+}
+.toast.ok   { border-color: rgba(77,255,170,.25);  color: var(--green); }
+.toast.err  { border-color: rgba(255,77,106,.25);  color: var(--red); }
+.toast.info { border-color: rgba(41,236,255,.2);   color: var(--cyan); }
+.toast.warn { border-color: rgba(255,194,0,.2);    color: var(--amber); }
+
+/* Prompt server info bar */
+.server-bar {
+  margin: 0 28px 0; padding: 10px 16px;
+  background: rgba(167,139,250,.05); border: 1px solid rgba(167,139,250,.12);
+  border-radius: 10px; font-family: var(--mono); font-size: 11px; color: var(--txt2);
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+  animation: fadeUp .4s .05s ease both;
+}
+.server-bar-url { color: var(--purple); font-weight: 600; }
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+@keyframes slideDown { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeUp    { from{opacity:0;transform:translateY(10px)}  to{opacity:1;transform:translateY(0)} }
+@keyframes blink     { 0%,100%{opacity:1} 50%{opacity:.3} }
+</style>
+</head>
+<body>
+
+<div class="bg-canvas"></div>
+<div class="bg-grid"></div>
+<div class="toast-wrap" id="toasts"></div>
+
+<!-- ════════════════════════════════════════
+     LOGIN OVERLAY
+════════════════════════════════════════ -->
+<div id="login-overlay">
+  <div class="login-scanlines"></div>
+  <div class="login-box">
+    <div class="login-accent"></div>
+    <div class="login-logo">
+      <div class="login-logo-icon">🧠</div>
+      <div class="login-logo-name">Prompt Manager</div>
+      <div class="login-logo-sub">promptapi · access required</div>
+    </div>
+    <label class="login-label" for="login-pw">access key</label>
+    <div class="login-input-wrap">
+      <input id="login-pw" class="login-input" type="password"
+             placeholder="••••••••••••" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter') doLogin()">
+      <button class="login-eye" id="eye-btn" onclick="toggleEye()" title="show/hide">👁</button>
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">authenticate</button>
+    <div class="login-error" id="login-error">
+      <span>⚠</span><span id="login-error-msg">wrong password</span>
+    </div>
+    <div class="login-dots hidden" id="login-dots">
+      <div class="login-dot"></div>
+      <div class="login-dot"></div>
+      <div class="login-dot"></div>
+    </div>
+    <div class="login-footer" id="login-server-hint" style="margin-top:12px">connecting to —</div>
+    <div class="login-footer" style="margin-top:10px">
+      <a href="server_settings.html" style="color:var(--purple);text-decoration:none;letter-spacing:1px">⚙ server settings</a>
+    </div>
+    <div class="login-footer">secure · local · encrypted</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     MAIN APP
+════════════════════════════════════════ -->
+<div id="app">
+  <!-- Header -->
+  <header>
+    <div class="header-left">
+      <div class="header-icon">🧠</div>
+      <div>
+        <div class="header-title">Prompt Manager</div>
+        <div class="header-sub" id="header-sub-url">promptapi · —</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="conn-badge err" id="conn-badge">
+        <div class="dot"></div><span id="conn-text">connecting…</span>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">⏻ logout</button>
+    </div>
+  </header>
+
+  <!-- Server info bar -->
+  <div class="server-bar" style="margin-top:16px">
+    <span>🔗 promptapi</span>
+    <span class="server-bar-url" id="server-bar-url">—</span>
+    <span style="margin-left:auto;cursor:pointer;color:var(--purple)" onclick="loadSections()" title="Reload">↻ reload</span>
+  </div>
+
+  <!-- Main grid -->
+  <div class="main">
+    <!-- Section List -->
+    <div class="section-panel">
+      <div class="panel-head">
+        <div class="panel-title">📋 Sections <span class="panel-count" id="sec-count">0</span></div>
+        <button class="btn btn-purple btn-sm" onclick="newSection()">+ New</button>
+      </div>
+      <div class="section-list" id="section-list">
+        <div style="padding:24px;color:var(--txt2);font-family:var(--mono);font-size:12px;text-align:center">Loading…</div>
+      </div>
+      <div class="panel-footer">
+        <button class="btn btn-danger" onclick="deleteSection()" style="width:100%;padding:8px">🗑 Delete Section</button>
+      </div>
+    </div>
+
+    <!-- Editor -->
+    <div class="editor-panel">
+      <div class="panel-head">
+        <div class="panel-title">✏️ Section Editor</div>
+        <span class="unsaved-badge" id="unsaved-badge">● Unsaved changes</span>
+      </div>
+      <div id="editor-content">
+        <!-- shows empty state initially, replaced when a section is selected -->
+        <div class="empty-state" id="empty-state">
+          <div class="empty-icon">🧠</div>
+          <div>Select a section or create a new one</div>
+          <button class="btn btn-purple" onclick="newSection()" style="margin-top:8px">+ New Section</button>
+        </div>
+        <div id="editor-form" style="display:none;flex-direction:column;height:100%">
+          <div class="editor-body">
+            <div class="toggle-row">
+              <span class="tr-label" id="status-label">&#x25CF; Enabled &mdash; included in system prompt</span>
+              <label class="toggle" title="Enable / disable this section">
+                <input type="checkbox" id="p-enabled" onchange="toggleSectionBlock()">
+                <div class="toggle-track"></div>
+                <div class="toggle-thumb"></div>
+              </label>
+            </div>
+            <div>
+              <label class="f-label">KEY (unique ID)</label>
+              <input class="f-input" id="p-key" placeholder="e.g. os_commands" oninput="markDirty()" spellcheck="false">
+            </div>
+            <div>
+              <label class="f-label">TITLE</label>
+              <input class="f-input" id="p-title" placeholder="Section title" oninput="markDirty()" spellcheck="false">
+            </div>
+            <div>
+              <label class="f-label">DESCRIPTION</label>
+              <textarea class="f-input" id="p-desc" rows="5" placeholder="Describe what this API does…" oninput="markDirty()" spellcheck="false"></textarea>
+            </div>
+            <div>
+              <label class="f-label">HOW TO USE</label>
+              <textarea class="f-input" id="p-how" rows="9" placeholder="Usage examples, commands, syntax…" oninput="markDirty()" spellcheck="false"></textarea>
+            </div>
+          </div>
+          <div class="editor-footer">
+            <button class="btn btn-ghost"   onclick="discardSection()">↺ Discard</button>
+            <button class="btn btn-ghost"   onclick="copyKey()">📋 Copy Key</button>
+            <button class="btn btn-purple"  onclick="saveSection()">💾 Save Section</button>
+            <button class="btn btn-primary" onclick="saveAll()">☁ Save All</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="net_config.js"></script>
+<script>
+// ─── Config: connection settings come from net_config.js (shared localStorage).
+//     The Prompt API address is auto-discovered from the llm-server's
+//     GET /server_settings — configured on the Server Settings page. ───
+const TOKEN_KEY = 'prompt_mgr_token';          // separate token for prompt manager
+
+const _getPromptApiBase  = netGetPromptApiBase;
+const _getPromptApiLabel = netGetPromptApiLabel;
+
+// ─── Auth ─────────────────────────────────────────────────────────
+let _token = localStorage.getItem(TOKEN_KEY) || '';
+
+function _saveToken(t) { _token = t; localStorage.setItem(TOKEN_KEY, t); }
+function _clearToken()  { _token = '';  localStorage.removeItem(TOKEN_KEY); }
+
+// ─── Login UI ─────────────────────────────────────────────────────
+function toggleEye() {
+  const inp = document.getElementById('login-pw');
+  const btn = document.getElementById('eye-btn');
+  if (inp.type === 'password') { inp.type = 'text';     btn.textContent = '🙈'; }
+  else                          { inp.type = 'password'; btn.textContent = '👁'; }
+}
+
+function _setLoginLoading(v) {
+  document.getElementById('login-btn').disabled = v;
+  document.getElementById('login-dots').classList.toggle('hidden', !v);
+}
+
+function _setLoginError(msg) {
+  const el    = document.getElementById('login-error');
+  const msgEl = document.getElementById('login-error-msg');
+  const inp   = document.getElementById('login-pw');
+  if (msg) {
+    msgEl.textContent = msg; el.classList.add('visible');
+    inp.style.borderColor = 'rgba(255,77,106,.5)';
+    inp.style.boxShadow   = '0 0 0 3px rgba(255,77,106,.1)';
+    inp.focus(); inp.select();
+  } else {
+    el.classList.remove('visible');
+    inp.style.borderColor = '';
+    inp.style.boxShadow   = '';
+  }
+}
+
+async function doLogin() {
+  const pw = document.getElementById('login-pw').value;
+  if (!pw) { _setLoginError('enter access key'); return; }
+  _setLoginLoading(true); _setLoginError(null);
+  try {
+    const base = _getPromptApiBase();
+    const r = await fetch(`${base}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw })
+    });
+    const d = await r.json();
+    if (r.ok && d.status === 'ok') {
+      _saveToken(d.token);
+      document.getElementById('login-pw').value = '';
+      _hideLoginOverlay();
+      toast('authenticated', 'ok');
+      _bootApp();
+    } else {
+      const msgs = {
+        wrong_password:   'wrong access key',
+        no_password_set:  'no password configured on promptapi server'
+      };
+      _setLoginError(msgs[d.message] || d.message || 'authentication failed');
+    }
+  } catch(e) {
+    // Connection failure (not an auth failure) → open the Server Settings
+    // page so the user can fix the connection, then return to login.
+    _setLoginError(`server unreachable (${_getPromptApiLabel()}) — opening server settings…`);
+    toast('connection failed — opening server settings', 'warn');
+    setTimeout(() => { window.location.href = 'server_settings.html'; }, 1200);
+  } finally {
+    _setLoginLoading(false);
+  }
+}
+
+function doLogout() {
+  _clearToken(); _showLoginOverlay();
+  promptData = {}; selKey = null; renderSections();
+  toast('logged out', 'warn');
+}
+
+function _showLoginOverlay() {
+  document.getElementById('login-overlay').classList.remove('hidden');
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login-server-hint').textContent =
+    `connecting to ${_getPromptApiLabel()}`;
+  setTimeout(() => document.getElementById('login-pw').focus(), 120);
+}
+
+function _hideLoginOverlay() {
+  document.getElementById('login-overlay').classList.add('hidden');
+  document.getElementById('app').classList.add('visible');
+}
+
+// ─── API helper ───────────────────────────────────────────────────
+async function _api(path, body, method) {
+  const base = _getPromptApiBase();
+  const m    = method || (body ? 'POST' : 'GET');
+  const headers = {};
+  if (body)   headers['Content-Type']  = 'application/json';
+  if (_token) headers['X-Auth-Token']  = _token;
+  const r = await fetch(`${base}${path}`, {
+    method: m, headers,
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (r.status === 401) {
+    _clearToken(); _showLoginOverlay();
+    throw new Error('unauthorized — re-authenticate');
+  }
+  if (!r.ok) {
+    let msg = r.statusText;
+    try { const d = await r.json(); msg = d.error || d.message || msg; } catch {}
+    throw new Error(msg);
+  }
+  return r.json();
+}
+
+// ─── Connection check ─────────────────────────────────────────────
+function _setConn(ok) {
+  const badge = document.getElementById('conn-badge');
+  const txt   = document.getElementById('conn-text');
+  badge.className = `conn-badge ${ok ? 'ok' : 'err'}`;
+  txt.textContent = ok ? 'connected' : 'unreachable';
+}
+
+// ─── State ────────────────────────────────────────────────────────
+let promptData = {};
+let selKey     = null;
+
+// ─── Load sections ────────────────────────────────────────────────
+async function loadSections() {
+  try {
+    const d = await _api('/api/prompt', null, 'GET');
+    promptData = d.data || d;
+    _setConn(true);
+    renderSections();
+    toast(`Loaded ${Object.keys(promptData).length} sections`, 'ok');
+  } catch(e) {
+    _setConn(false);
+    if (e.message !== 'unauthorized — re-authenticate') {
+      document.getElementById('section-list').innerHTML =
+        `<div style="padding:20px;color:var(--red);font-family:var(--mono);font-size:12px">Error: ${esc(e.message)}</div>`;
+      toast('Cannot reach promptapi: ' + e.message, 'err');
+    }
+  }
+}
+
+// ─── Render section list ──────────────────────────────────────────
+function renderSections() {
+  const list = document.getElementById('section-list');
+  const keys = Object.keys(promptData);
+  document.getElementById('sec-count').textContent = keys.length;
+  if (!keys.length) {
+    list.innerHTML = '<div style="padding:24px;color:var(--txt2);font-family:var(--mono);font-size:12px;text-align:center">No sections yet.<br>Click + New to add one.</div>';
+    return;
+  }
+  list.innerHTML = keys.map(k => {
+    const off = promptData[k]?.block === true;
+    const badge = off
+      ? `<span class="sec-badge off" title="Click to enable"  onclick="toggleSectionFromList('${eJs(k)}', event)">OFF</span>`
+      : `<span class="sec-badge on"  title="Click to disable" onclick="toggleSectionFromList('${eJs(k)}', event)">ON</span>`;
+    return `
+    <div class="section-item ${k === selKey ? 'active' : ''}" onclick="selectSection('${eJs(k)}')">
+      <div class="section-key">${esc(k)}${badge}</div>
+      <div class="section-title">${esc(promptData[k]?.title || '')}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Select section ───────────────────────────────────────────────
+function selectSection(key) {
+  selKey = key;
+  const sec = promptData[key] || {};
+  document.getElementById('p-key').value     = key;
+  document.getElementById('p-title').value   = sec.title       || '';
+  document.getElementById('p-desc').value    = sec.description || '';
+  document.getElementById('p-how').value     = sec.how_to_use  || '';
+  document.getElementById('p-enabled').checked = (sec.block !== true);
+  _updateStatusLabel();
+  clearDirty(); showEditor(); renderSections();
+}
+
+function _updateStatusLabel() {
+  const enabled = document.getElementById('p-enabled').checked;
+  const el = document.getElementById('status-label');
+  el.innerHTML = enabled
+    ? '● Enabled — included in system prompt'
+    : '● Off — excluded from system prompt';
+  el.style.color = enabled ? 'var(--green)' : 'var(--red)';
+}
+
+// Per-section on/off. block:true => excluded from the system prompt.
+// Shared by the editor toggle and the clickable ON/OFF badge in the list.
+async function _applySectionBlock(key, block) {
+  promptData[key] = promptData[key] || {};
+  promptData[key].block = block;
+  // keep the editor toggle in sync if this section is the one open
+  if (key === selKey) {
+    const cb = document.getElementById('p-enabled');
+    if (cb) cb.checked = !block;
+    _updateStatusLabel();
+  }
+  renderSections();
+  try {
+    const r = await _api('/api/prompt/block', { key, block });
+    promptData[key].block = r.block;
+    if (key === selKey) {
+      const cb = document.getElementById('p-enabled');
+      if (cb) cb.checked = !r.block;
+      _updateStatusLabel();
+    }
+    renderSections();
+    toast(`"${key}" ${r.block ? 'disabled' : 'enabled'}`, r.block ? 'warn' : 'ok');
+  } catch(e) {
+    // Section may not be saved on the server yet — keep the local state;
+    // it will be persisted (with block) on Save.
+    toast(`set locally — will sync on Save (${e.message})`, 'warn');
+  }
+}
+
+// Editor checkbox
+function toggleSectionBlock() {
+  if (!selKey) return;
+  _applySectionBlock(selKey, !document.getElementById('p-enabled').checked);
+}
+
+// Clickable badge in the section list (does not change the selection)
+function toggleSectionFromList(key, ev) {
+  if (ev) ev.stopPropagation();
+  _applySectionBlock(key, !(promptData[key]?.block === true));
+}
+
+function showEditor() {
+  document.getElementById('empty-state').style.display  = 'none';
+  const form = document.getElementById('editor-form');
+  form.style.display = 'flex';
+}
+function hideEditor() {
+  document.getElementById('empty-state').style.display  = '';
+  document.getElementById('editor-form').style.display  = 'none';
+}
+
+function newSection() {
+  const key = `section_${Object.keys(promptData).length + 1}`;
+  promptData[key] = { title: 'New Section', description: '', how_to_use: '', block: false };
+  renderSections(); selectSection(key);
+}
+
+// ─── Save section ─────────────────────────────────────────────────
+async function saveSection() {
+  const newKey = document.getElementById('p-key').value.trim();
+  if (!newKey) { toast('KEY cannot be empty', 'err'); return; }
+  const sec = {
+    title:       document.getElementById('p-title').value.trim(),
+    description: document.getElementById('p-desc').value,
+    how_to_use:  document.getElementById('p-how').value,
+    block:       !document.getElementById('p-enabled').checked
+  };
+  const oldKey = selKey;
+  if (oldKey && oldKey !== newKey) {
+    const nd = {};
+    for (const k of Object.keys(promptData)) nd[k === oldKey ? newKey : k] = promptData[k];
+    promptData = nd;
+  }
+  promptData[newKey] = sec; selKey = newKey; renderSections(); clearDirty();
+  try {
+    if (oldKey && oldKey !== newKey)
+      await _api('/api/prompt/del', { key: oldKey });
+    await _api('/api/prompt/add', { key: newKey, section: sec });
+    toast(`"${newKey}" saved`, 'ok');
+  } catch(e) {
+    toast('Save failed: ' + e.message, 'err');
+  }
+}
+
+// ─── Save all ─────────────────────────────────────────────────────
+async function saveAll() {
+  await saveSection();
+  try {
+    await _api('/api/prompt/set', { data: promptData });
+    toast('prompt.json saved', 'ok');
+  } catch(e) {
+    toast('Save all failed: ' + e.message, 'err');
+  }
+}
+
+// ─── Delete section ───────────────────────────────────────────────
+async function deleteSection() {
+  if (!selKey) { toast('Select a section first', 'warn'); return; }
+  if (!confirm(`Delete section "${selKey}"?`)) return;
+  const key = selKey;
+  delete promptData[key]; selKey = null; clearEditor(); hideEditor(); renderSections();
+  try {
+    await _api('/api/prompt/del', { key });
+    toast(`"${key}" deleted`, 'warn');
+  } catch(e) {
+    toast('Delete failed: ' + e.message, 'err');
+  }
+}
+
+function discardSection() { if (selKey) selectSection(selKey); clearDirty(); }
+function copyKey()  { navigator.clipboard.writeText(document.getElementById('p-key').value.trim()); toast('Key copied', 'info'); }
+function clearEditor() { ['p-key','p-title','p-desc','p-how'].forEach(id => document.getElementById(id).value = ''); clearDirty(); }
+function markDirty()   { document.getElementById('unsaved-badge').classList.add('show'); }
+function clearDirty()  { document.getElementById('unsaved-badge').classList.remove('show'); }
+
+// ─── Toast ────────────────────────────────────────────────────────
+function toast(msg, type='info') {
+  const icons = {ok:'+', err:'✕', warn:'!', info:'i'};
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span style="font-family:var(--mono);font-weight:700">${icons[type]||'i'}</span><span>${esc(msg)}</span>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => { el.style.cssText='opacity:0;transition:opacity .3s'; setTimeout(()=>el.remove(),300); }, 3500);
+}
+
+function esc(s)  { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function eJs(s)  { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+// ─── Boot ─────────────────────────────────────────────────────────
+function _bootApp() {
+  const label = _getPromptApiLabel();
+  const base  = _getPromptApiBase();
+  document.getElementById('header-sub-url').textContent  = `promptapi · ${label}`;
+  document.getElementById('server-bar-url').textContent  = base;
+  loadSections();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────
+async function _init() {
+  // Follow server-side port changes automatically: refresh the Prompt API
+  // address from the saved llm-server's /server_settings (silent on failure).
+  try { await netRefreshFromLlm(); } catch {}
+  document.getElementById('login-server-hint').textContent = `connecting to ${_getPromptApiLabel()}`;
+  if (!_token) {
+    // no token — check if login is required
+    try {
+      const r = await fetch(`${_getPromptApiBase()}/api/prompt`, { method: 'GET' });
+      if (r.status === 401) { _showLoginOverlay(); }
+      else                   { _hideLoginOverlay(); _bootApp(); }
+    } catch { _showLoginOverlay(); }
+  } else {
+    // validate existing token
+    try {
+      const r = await fetch(`${_getPromptApiBase()}/api/prompt`, {
+        method: 'GET',
+        headers: { 'X-Auth-Token': _token }
+      });
+      if (r.status === 401) { _clearToken(); _showLoginOverlay(); }
+      else                   { _hideLoginOverlay(); _bootApp(); }
+    } catch { _showLoginOverlay(); }
+  }
+}
+
+_init();
+</script>
+</body>
+</html>

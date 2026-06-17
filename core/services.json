@@ -1,0 +1,27 @@
+{
+  "internetapi:": {
+    "ip": "127.0.0.1",
+    "port": 8400,
+    "Block": false
+  },
+  "tts:": {
+    "ip": "127.0.0.1",
+    "port": 8113,
+    "Block": false
+  },
+  "reconweb:": {
+    "ip": "127.0.0.1",
+    "port": 8716,
+    "Block": false
+  },
+  "subdomains:": {
+    "ip": "127.0.0.1",
+    "port": 8716,
+    "Block": false
+  },
+  "fileapi:": {
+    "ip": "127.0.0.1",
+    "port": 8910,
+    "Block": false
+  }
+}

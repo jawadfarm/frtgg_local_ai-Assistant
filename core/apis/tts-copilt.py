@@ -302,6 +302,20 @@ interrupt_event = threading.Event()
 outputting = threading.Event()
 inference_lock = threading.Lock()
 
+# PortAudio is NOT thread-safe: sd.play / sd.stop must never run concurrently
+# from different threads or the process segfaults (exits with code=None).
+# Every sd.* call below goes through this lock.
+audio_lock = threading.Lock()
+
+
+def stop_audio():
+    """Stop playback safely. Use this everywhere instead of a bare sd.stop()."""
+    with audio_lock:
+        try:
+            sd.stop()
+        except Exception as e:
+            log.error(f"sd.stop failed: {e}")
+
 # ===============================
 # audio player thread
 # ===============================
@@ -319,11 +333,29 @@ def audio_player():
         if wav is None or interrupt_event.is_set():
             continue
 
-        outputting.set()
-        sd.play(wav, SAMPLE_RATE, blocking=True)
+        try:
+            outputting.set()
+            # non-blocking play so we stay responsive to interrupts and only
+            # ever touch PortAudio from THIS thread (under audio_lock)
+            with audio_lock:
+                sd.play(wav, SAMPLE_RATE)
 
-        if audio_queue.empty():
-            outputting.clear()
+            while True:
+                with audio_lock:
+                    stream = sd.get_stream()
+                    active = bool(stream) and stream.active
+                if not active:
+                    break
+                if interrupt_event.is_set():
+                    with audio_lock:
+                        sd.stop()
+                    break
+                time.sleep(0.02)
+        except Exception as e:
+            log.error(f"audio playback error: {e}")
+        finally:
+            if audio_queue.empty():
+                outputting.clear()
 
 # ===============================
 # text cleaner
@@ -503,11 +535,14 @@ def handle_tts(text: str):
 def tts_worker():
     while True:
         text = request_queue.get()
-        interrupt_event.clear()
-        if not ensure_model_loaded():
-            log.error("No model could be loaded — dropping request")
-            continue
-        handle_tts(text)
+        try:
+            interrupt_event.clear()
+            if not ensure_model_loaded():
+                log.error("No model could be loaded — dropping request")
+                continue
+            handle_tts(text)
+        except Exception as e:
+            log.exception(f"tts_worker recovered from error: {e}")
 
 # ===============================
 # recv full
@@ -567,99 +602,125 @@ def socket_server():
     log.info(f"Server listening on {bind_host}:{PORT}")
 
     while True:
-        conn, addr = server.accept()
-        client_ip = addr[0]
-        client_port = addr[1]
+        try:
+            conn, addr = server.accept()
+        except Exception as e:
+            log.error(f"accept failed: {e}")
+            continue
 
-        if not client_allowed(client_ip):
-            log.warning(f"Rejected connection from {client_ip}:{client_port} (not allowed by settings)")
+        # Each connection is fully isolated: a client that disconnects early
+        # (broken pipe on sendall, etc.) must never crash the whole server.
+        try:
+            client_ip = addr[0]
+            client_port = addr[1]
+
+            if not client_allowed(client_ip):
+                log.warning(f"Rejected connection from {client_ip}:{client_port} (not allowed by settings)")
+                conn.close()
+                continue
+
+            with _req_lock:
+                _req_counter += 1
+                req_id = _req_counter
+
+            recv_start = time.perf_counter()
+            text = recv_full(conn)
+            recv_ms = (time.perf_counter() - recv_start) * 1000
+
+            stripped = text.strip()
+            log.info(
+                f"REQ #{req_id:05d} | "
+                f"from={client_ip}:{client_port} | "
+                f"recv={recv_ms:.1f}ms | "
+                f"len={len(text)} | "
+                f"text={text!r:.120}"
+            )
+
+            if stripped == "Command_TTS:get_gpus":
+                resp = json.dumps({"gpus": list_gpus()})
+                conn.sendall(resp.encode("utf-8"))
+                conn.close()
+                log.info(f"REQ #{req_id:05d} | command=get_gpus -> {resp}")
+                continue
+
+            run_match = re.fullmatch(r"Command_TTS:run\[(\d+)\]", stripped)
+            if run_match:
+                idx = int(run_match.group(1))
+                log.info(f"REQ #{req_id:05d} | command=run[{idx}] — switching GPU")
+                interrupt_event.set()
+                stop_audio()
+                _drain(audio_queue)
+                _drain(request_queue)
+                result = load_model(idx)
+                interrupt_event.clear()
+                conn.sendall(result.encode("utf-8"))
+                conn.close()
+                log.info(f"REQ #{req_id:05d} | run result: {result}")
+                continue
+
+            conn.sendall(b"ok")
             conn.close()
-            continue
 
-        with _req_lock:
-            _req_counter += 1
-            req_id = _req_counter
+            text = stripped.replace("frtgg", "fartigg")
+            if not text:
+                log.warning(f"REQ #{req_id:05d} | empty request — ignored")
+                continue
 
-        recv_start = time.perf_counter()
-        text = recv_full(conn)
-        recv_ms = (time.perf_counter() - recv_start) * 1000
+            if text.lower() == "exit":
+                log.info(f"REQ #{req_id:05d} | command=EXIT — shutting down")
+                interrupt_event.set()
+                stop_audio()
+                _drain(audio_queue)
+                _drain(request_queue)
 
-        stripped = text.strip()
-        log.info(
-            f"REQ #{req_id:05d} | "
-            f"from={client_ip}:{client_port} | "
-            f"recv={recv_ms:.1f}ms | "
-            f"len={len(text)} | "
-            f"text={text!r:.120}"
-        )
+                if tts is not None:
+                    with inference_lock, torch.inference_mode(), _autocast:
+                        out = tts.synthesizer.tts_model.inference(
+                            text="goodbye",
+                            language="en",
+                            gpt_cond_latent=gpt_cond_latent,
+                            speaker_embedding=speaker_embedding,
+                        )
+                    wav = out["wav"] if isinstance(out, dict) else out
+                    wav = np.asarray(wav, dtype=np.float32)
+                    wav /= np.max(np.abs(wav)) + 1e-9
+                    interrupt_event.clear()
+                    with audio_lock:
+                        sd.play(wav, SAMPLE_RATE, blocking=True)
 
-        if stripped == "Command_TTS:get_gpus":
-            resp = json.dumps({"gpus": list_gpus()})
-            conn.sendall(resp.encode("utf-8"))
-            conn.close()
-            log.info(f"REQ #{req_id:05d} | command=get_gpus -> {resp}")
-            continue
+                log.info("Server stopped cleanly")
+                server.close()
+                sys.exit(0)
 
-        run_match = re.fullmatch(r"Command_TTS:run\[(\d+)\]", stripped)
-        if run_match:
-            idx = int(run_match.group(1))
-            log.info(f"REQ #{req_id:05d} | command=run[{idx}] — switching GPU")
-            interrupt_event.set()
-            sd.stop()
-            _drain(audio_queue)
-            _drain(request_queue)
-            result = load_model(idx)
-            interrupt_event.clear()
-            conn.sendall(result.encode("utf-8"))
-            conn.close()
-            log.info(f"REQ #{req_id:05d} | run result: {result}")
-            continue
-
-        conn.sendall(b"ok")
-        conn.close()
-
-        text = stripped.replace("frtgg", "fartigg")
-        if not text:
-            log.warning(f"REQ #{req_id:05d} | empty request — ignored")
-            continue
-
-        if text.lower() == "exit":
-            log.info(f"REQ #{req_id:05d} | command=EXIT — shutting down")
-            interrupt_event.set()
-            sd.stop()
-            _drain(audio_queue)
-
-            if tts is not None:
-                with inference_lock, torch.inference_mode(), _autocast:
-                    out = tts.synthesizer.tts_model.inference(
-                        text="goodbye",
-                        language="en",
-                        gpt_cond_latent=gpt_cond_latent,
-                        speaker_embedding=speaker_embedding,
-                    )
-                wav = out["wav"] if isinstance(out, dict) else out
-                wav = np.asarray(wav, dtype=np.float32)
-                wav /= np.max(np.abs(wav)) + 1e-9
-                sd.play(wav, SAMPLE_RATE, blocking=True)
-
-            log.info("Server stopped cleanly")
-            server.close()
-            sys.exit(0)
-
-        if outputting.is_set():
-            log.info(f"REQ #{req_id:05d} | action=INTERRUPT+REPLACE (audio was playing)")
-            interrupt_event.set()
-            sd.stop()
-            _drain(audio_queue)
-            _drain(request_queue)
-            request_queue.put(text)
-        else:
-            log.info(f"REQ #{req_id:05d} | action=QUEUED (queue_size≈{request_queue.qsize()+1})")
-            request_queue.put(text)
+            if outputting.is_set():
+                log.info(f"REQ #{req_id:05d} | action=INTERRUPT+REPLACE (audio was playing)")
+                interrupt_event.set()
+                stop_audio()
+                _drain(audio_queue)
+                _drain(request_queue)
+                request_queue.put(text)
+            else:
+                log.info(f"REQ #{req_id:05d} | action=QUEUED (queue_size≈{request_queue.qsize()+1})")
+                request_queue.put(text)
+        except Exception as e:
+            log.exception(f"connection handler error: {e}")
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 # ===============================
 # start
 # ===============================
+# Load the model eagerly at startup so the FIRST request is fast.
+# (Without this the model only loads lazily on the first request, adding
+#  ~15-30s of load + warmup latency to it.)
+log.info("Preloading model...")
+if ensure_model_loaded():
+    log.info("Model preloaded — ready for requests")
+else:
+    log.error("Model preload failed — will retry lazily on first request")
+
 log.info("Starting audio_player thread")
 threading.Thread(target=audio_player, daemon=True).start()
 log.info("Starting tts_worker thread")

@@ -353,20 +353,6 @@ def _pywin32_postinstall(exe):
         log(f"  pywin32 post-install skipped: {e}")
 
 
-def install_flask_system():
-    """Install Flask into the SYSTEM Python (sys.executable — the interpreter
-    you launched installer.py with), NOT core/python. runner.py runs under the
-    system Python and needs Flask available there."""
-    log("Installing Flask into the system Python (sys.executable)…")
-    cmd = [sys.executable, "-m", "pip", "install", "flask"]
-    log("  $ " + " ".join(cmd))
-    env = dict(os.environ)
-    env["PYTHONUNBUFFERED"] = "1"
-    proc = subprocess.run(cmd, env=env)
-    if proc.returncode != 0:
-        fail(f"failed to install flask into system Python (exit {proc.returncode})")
-
-
 def run_llama_installer():
     """Run core/llama-installer.py (downloads llama.cpp) once everything else
     is in place. Uses the system Python and runs from inside core/ (mirrors the
@@ -397,12 +383,27 @@ def seed_configs(force):
 
 
 # ── Step 4: password -> auth.json ────────────────────────────────────────────
+def _has_password(auth_path):
+    """True only if auth.json exists, parses, and holds a non-empty 'pass'."""
+    try:
+        with open(auth_path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+    except Exception:
+        return False
+    return isinstance(cfg, dict) and bool(cfg.get("pass"))
+
+
 def setup_auth(force):
     auth_path = os.path.join(CORE, "auth.json")
-    if os.path.exists(auth_path) and not force:
-        log("auth.json already exists — leaving it untouched "
+    # Only skip when a real password is already set (and not forcing). If the
+    # file is missing, corrupt, or has no 'pass', fall through and ask for one —
+    # otherwise the servers would block at startup waiting for a password.
+    if _has_password(auth_path) and not force:
+        log("auth.json already has a password — leaving it untouched "
             "(use --force to reset the password / key).")
         return False
+    if os.path.exists(auth_path) and not force:
+        log("auth.json exists but has no password — setting one now.")
 
     log("Set the master password (used by chat-server, llm-server, systemapi).")
     while True:
@@ -443,6 +444,95 @@ def _ask_yes_no(question, default=False):
     return ans in ("y", "yes")
 
 
+# ── Step 5: desktop shortcut (Windows) ───────────────────────────────────────
+def _verify_layout():
+    """Confirm the script is running from a complete project folder.
+    Returns (ok, missing_list)."""
+    required = {
+        "installer.py": os.path.join(ROOT, "installer.py"),
+        "core/": CORE,
+        "core/runner.py": os.path.join(CORE, "runner.py"),
+        "core/python": python_exe(),
+    }
+    missing = [name for name, path in required.items() if not os.path.exists(path)]
+    return (not missing), missing
+
+
+def create_desktop_shortcut():
+    """Windows only: create a desktop shortcut that launches the runner with the
+    bundled interpreter, using logo.png (resized to a 256x256 .ico) as the icon.
+
+    Everything is done through PowerShell (always present on Windows): the icon
+    is built with System.Drawing and the .lnk with WScript.Shell — no extra
+    Python deps, and nothing touches PATH or the rest of the system."""
+    if not IS_WINDOWS:
+        log("Not Windows — skipping desktop shortcut.")
+        return
+
+    ok, missing = _verify_layout()
+    if not ok:
+        log(f"  skip shortcut — incomplete project folder, missing: {', '.join(missing)}")
+        return
+
+    exe = python_exe()
+    runner = os.path.join(CORE, "runner.py")
+    logo_png = os.path.join(ROOT, "logo.png")
+    ico_path = os.path.join(CORE, "logo.ico")
+
+    # Paths go in single-quoted PS strings so backslashes need no escaping; the
+    # desktop path is resolved by PowerShell to respect OneDrive redirection.
+    ps_script = f"""
+$ErrorActionPreference = 'Stop'
+$logo = '{logo_png}'
+$ico  = '{ico_path}'
+if (Test-Path $logo) {{
+  try {{
+    Add-Type -AssemblyName System.Drawing
+    $src = [System.Drawing.Image]::FromFile($logo)
+    $bmp = New-Object System.Drawing.Bitmap 256,256
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $g.DrawImage($src,0,0,256,256); $g.Dispose(); $src.Dispose()
+    $ms = New-Object System.IO.MemoryStream
+    $bmp.Save($ms,[System.Drawing.Imaging.ImageFormat]::Png); $bmp.Dispose()
+    $pngB = $ms.ToArray(); $ms.Dispose()
+    $fs = [System.IO.File]::Create($ico); $bw = New-Object System.IO.BinaryWriter($fs)
+    $bw.Write([byte[]]@(0,0,1,0,1,0,0,0,0,0))   # ICO header + 256x256 entry start
+    $bw.Write([uint16]1); $bw.Write([uint16]32) # color planes, bits per pixel
+    $bw.Write([uint32]$pngB.Length); $bw.Write([uint32]22); $bw.Write($pngB)
+    $bw.Close(); $fs.Close()
+  }} catch {{ }}
+}}
+$w = New-Object -ComObject WScript.Shell
+$desktop = [Environment]::GetFolderPath('Desktop')
+$s = $w.CreateShortcut((Join-Path $desktop 'FRTGG.lnk'))
+$s.TargetPath = '{exe}'
+$s.Arguments = '"{runner}"'
+$s.WorkingDirectory = '{CORE}'
+$s.Description = 'FRTGG - launch the runner'
+if (Test-Path $ico) {{ $s.IconLocation = $ico }}
+$s.Save()
+"""
+
+    tmp = tempfile.NamedTemporaryFile("w", suffix=".ps1", delete=False, encoding="utf-8")
+    tmp.write(ps_script)
+    tmp.close()
+    try:
+        subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive",
+             "-ExecutionPolicy", "Bypass", "-File", tmp.name],
+            check=True,
+        )
+        log("  desktop shortcut created: FRTGG (double-click to launch the runner).")
+    except Exception as e:
+        log(f"  could not create desktop shortcut: {e}")
+    finally:
+        try:
+            os.remove(tmp.name)
+        except OSError:
+            pass
+
+
 # ── Orchestration ────────────────────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(description="Provision core/python and seed config.")
@@ -456,12 +546,14 @@ def main():
 
     exe = acquire_python(args.force)
     installed = install_dependencies(exe)
-    install_flask_system()
     configs = seed_configs(args.force)
     auth_written = setup_auth(args.force)
 
     # Everything downloaded/installed — now fetch llama.cpp.
     run_llama_installer()
+
+    # Create a desktop shortcut that launches the runner (Windows only).
+    create_desktop_shortcut()
 
     # ── Summary ──────────────────────────────────────────────────────────
     print("\n" + "=" * 60)

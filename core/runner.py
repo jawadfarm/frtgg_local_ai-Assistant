@@ -24,6 +24,7 @@ import platform
 import ipaddress
 import threading
 import subprocess
+import webbrowser
 from collections import deque
 from functools import wraps
 
@@ -1077,6 +1078,28 @@ def _static(p):
 # ══════════════════════════════════════════════════════════════════
 #  MAIN
 # ══════════════════════════════════════════════════════════════════
+def _open_browser_when_ready(port, host="127.0.0.1", timeout=20.0):
+    """Wait until the runner's port actually accepts connections, then open the
+    dashboard in the default browser — so the user doesn't have to copy/paste the
+    URL. Runs in a background thread; stays silent if no browser is available
+    (e.g. headless Linux)."""
+    url = f"http://{host}:{port}/"
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=1):
+                break
+        except OSError:
+            time.sleep(0.3)
+    else:
+        return  # server never came up in time — don't open anything
+    try:
+        if webbrowser.open(url):
+            print(f"[runner] opened {url} in your browser")
+    except Exception:
+        pass
+
+
 def main():
     print("══════════════════════════════════════════════════════")
     print(" runner.py — core server supervisor")
@@ -1101,6 +1124,10 @@ def main():
     port = int(cfg.get("port", 8721))
     print(f"[runner] listening on http://0.0.0.0:{port}  "
           f"(localhost only unless network flags enabled)")
+    # Open the dashboard in the browser once the server is actually accepting
+    # connections (background thread; runner_app.run below blocks).
+    threading.Thread(target=_open_browser_when_ready, args=(port,),
+                     daemon=True).start()
     runner_app.run(host="0.0.0.0", port=port, threaded=True, use_reloader=False)
 
 

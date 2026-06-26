@@ -10,6 +10,15 @@ import threading
 import sys
 import re
 
+# Force UTF-8 on stdout/stderr so log prints containing Unicode don't raise
+# UnicodeEncodeError on a cp1252 Windows console — whether run directly or as a
+# piped subprocess under runner.py.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 SERVER_HOST = "127.0.0.1"
 SERVER_PORT = 8901
 CLIENT_HOST = "0.0.0.0"

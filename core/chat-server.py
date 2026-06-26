@@ -64,6 +64,16 @@ from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 from datetime import datetime
 import re as _re
+import sys
+
+# Force UTF-8 on stdout/stderr so log prints containing Unicode (→, —, …) don't
+# raise UnicodeEncodeError on a cp1252 Windows console — whether this server is
+# run directly or as a piped subprocess under runner.py.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 
 LLM_TCP_HOST   = "127.0.0.1"

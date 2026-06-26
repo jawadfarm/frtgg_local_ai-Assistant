@@ -24,7 +24,6 @@ import platform
 import ipaddress
 import threading
 import subprocess
-import webbrowser
 from collections import deque
 from functools import wraps
 
@@ -32,6 +31,14 @@ from flask import Flask, request, jsonify, send_from_directory, Response
 
 IS_WINDOWS = platform.system() == "Windows"
 HERE       = os.path.dirname(os.path.abspath(__file__))
+
+# Make the runner's own console UTF-8 so re-emitted child logs containing
+# Unicode (→, ─, …) don't raise UnicodeEncodeError on a cp1252 Windows console.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -358,6 +365,11 @@ class Service:
                 return False, "already_running"
         env = dict(os.environ)
         env["PYTHONUNBUFFERED"] = "1"
+        # Force UTF-8 on child stdio so Unicode in logs (→, ─, …) survives even
+        # when the OS locale encoding is cp1252 (Windows). Without this a print()
+        # of such a character raises UnicodeEncodeError inside the child.
+        env["PYTHONUTF8"]       = "1"
+        env["PYTHONIOENCODING"] = "utf-8"
         try:
             proc = subprocess.Popen(
                 self.cmd,
@@ -366,6 +378,8 @@ class Service:
                 stderr=subprocess.STDOUT,
                 stdin=subprocess.DEVNULL,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 bufsize=1,
                 env=env,
             )
@@ -1078,28 +1092,6 @@ def _static(p):
 # ══════════════════════════════════════════════════════════════════
 #  MAIN
 # ══════════════════════════════════════════════════════════════════
-def _open_browser_when_ready(port, host="127.0.0.1", timeout=20.0):
-    """Wait until the runner's port actually accepts connections, then open the
-    dashboard in the default browser — so the user doesn't have to copy/paste the
-    URL. Runs in a background thread; stays silent if no browser is available
-    (e.g. headless Linux)."""
-    url = f"http://{host}:{port}/"
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        try:
-            with socket.create_connection((host, port), timeout=1):
-                break
-        except OSError:
-            time.sleep(0.3)
-    else:
-        return  # server never came up in time — don't open anything
-    try:
-        if webbrowser.open(url):
-            print(f"[runner] opened {url} in your browser")
-    except Exception:
-        pass
-
-
 def main():
     print("══════════════════════════════════════════════════════")
     print(" runner.py — core server supervisor")
@@ -1124,10 +1116,6 @@ def main():
     port = int(cfg.get("port", 8721))
     print(f"[runner] listening on http://0.0.0.0:{port}  "
           f"(localhost only unless network flags enabled)")
-    # Open the dashboard in the browser once the server is actually accepting
-    # connections (background thread; runner_app.run below blocks).
-    threading.Thread(target=_open_browser_when_ready, args=(port,),
-                     daemon=True).start()
     runner_app.run(host="0.0.0.0", port=port, threaded=True, use_reloader=False)
 
 

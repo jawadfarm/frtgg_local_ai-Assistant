@@ -20,6 +20,16 @@ from datetime import datetime, timezone
 
 datetime.now(timezone.utc)
 
+# The startup banner below uses box-drawing characters (╔═║). On a cp1252
+# Windows console (the default) printing those raises UnicodeEncodeError and
+# kills the server before it binds. Force UTF-8 on stdout/stderr so it runs
+# regardless of how it was launched (directly or as a piped subprocess).
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ─────────────────────────────────────────────

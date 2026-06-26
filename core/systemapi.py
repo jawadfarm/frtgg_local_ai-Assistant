@@ -16,6 +16,15 @@ import ipaddress
 import tempfile
 import psutil
 
+# Force UTF-8 on stdout/stderr so log prints containing Unicode (→, —, …) don't
+# raise UnicodeEncodeError on a cp1252 Windows console — whether run directly or
+# as a piped subprocess under runner.py.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 PORT = 8300
 
 # ── recv helper ───────────────────────────────────────────────────────────
